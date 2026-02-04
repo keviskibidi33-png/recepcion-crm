@@ -1,0 +1,43 @@
+import axios from 'axios';
+import { RecepcionMuestraData, RecepcionFilters } from '../types/recepcionTypes';
+
+const API_BASE_URL = 'http://localhost:8002/api/ordenes';
+
+const api = axios.create({
+    baseURL: API_BASE_URL,
+});
+
+export const recepcionApi = {
+    listar: async (skip = 0, limit = 100): Promise<RecepcionMuestraData[]> => {
+        const response = await api.get('/', { params: { skip, limit } });
+        return response.data;
+    },
+
+    obtener: async (id: number): Promise<RecepcionMuestraData> => {
+        const response = await api.get(`/${id}`);
+        return response.data;
+    },
+
+    crear: async (data: Partial<RecepcionMuestraData>): Promise<RecepcionMuestraData> => {
+        const response = await api.post('/', data);
+        return response.data;
+    },
+
+    eliminar: async (id: number): Promise<void> => {
+        await api.delete(`/${id}`);
+    },
+
+    descargarExcel: async (id: number, numeroOt: string): Promise<void> => {
+        const response = await api.get(`/${id}/excel`, {
+            responseType: 'blob',
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Recepcion_${numeroOt}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }
+};

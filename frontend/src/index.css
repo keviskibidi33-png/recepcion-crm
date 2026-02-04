@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* CRM Branding - OKLCH Scale (Zinc 260) */
+    --background: oklch(0.98 0.005 260);
+    --foreground: oklch(0.15 0.01 260);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.15 0.01 260);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.15 0.01 260);
+    --primary: oklch(0.55 0.18 220);
+    --primary-foreground: oklch(0.98 0.01 260);
+    --secondary: oklch(0.95 0.005 260);
+    --secondary-foreground: oklch(0.15 0.01 260);
+    --muted: oklch(0.95 0.005 260);
+    --muted-foreground: oklch(0.45 0.01 260);
+    --accent: oklch(0.55 0.18 220);
+    --accent-foreground: oklch(0.98 0.01 260);
+    --destructive: oklch(0.55 0.2 25);
+    --destructive-foreground: oklch(0.98 0.01 260);
+    --border: oklch(0.9 0.005 260);
+    --input: oklch(0.95 0.005 260);
+    --ring: oklch(0.55 0.18 220);
+    --radius: 0.75rem;
+
+    /* Success / Warning specific */
+    --success: oklch(0.6 0.2 145);
+    --warning: oklch(0.7 0.18 85);
+  }
+
+  .dark {
+    --background: oklch(0.13 0.01 260);
+    --foreground: oklch(0.95 0.01 260);
+    --card: oklch(0.16 0.01 260);
+    --card-foreground: oklch(0.95 0.01 260);
+    --popover: oklch(0.16 0.01 260);
+    --popover-foreground: oklch(0.95 0.01 260);
+    --primary: oklch(0.65 0.15 220);
+    --primary-foreground: oklch(0.98 0.01 260);
+    --secondary: oklch(0.22 0.01 260);
+    --secondary-foreground: oklch(0.95 0.01 260);
+    --muted: oklch(0.22 0.01 260);
+    --muted-foreground: oklch(0.65 0.01 260);
+    --accent: oklch(0.65 0.15 220);
+    --accent-foreground: oklch(0.98 0.01 260);
+    --destructive: oklch(0.55 0.2 25);
+    --destructive-foreground: oklch(0.98 0.01 260);
+    --border: oklch(0.28 0.01 260);
+    --input: oklch(0.22 0.01 260);
+    --ring: oklch(0.65 0.15 220);
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply font-display antialiased transition-colors duration-300;
+  }
+}
+
+.font-display {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}@layer utilities { input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } input[type=number] { -moz-appearance: textfield; } }
