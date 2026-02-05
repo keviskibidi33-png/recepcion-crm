@@ -310,6 +310,9 @@ class ExcelLogic:
                     for anchor in anchors_list:
                         frow = anchor.find('.//xdr:from/xdr:row', namespaces=d_ns)
                         fcol = anchor.find('.//xdr:from/xdr:col', namespaces=d_ns)
+                        trow = anchor.find('.//xdr:to/xdr:row', namespaces=d_ns)
+                        tcol = anchor.find('.//xdr:to/xdr:col', namespaces=d_ns)
+                        
                         if frow is not None:
                             orig_row = int(frow.text)
                             
@@ -320,24 +323,32 @@ class ExcelLogic:
                                 
                             # Blue Line (Originally at Row 51 / index 50)
                             if orig_row == 50:
-                                frow.text = str((row_nota_label - 1) + 7 + shift)
-                                if fcol is not None: fcol.text = "4" # Center on Column E
-                                print(f"DEBUG: Moved Blue Line (orig index 50) to Row {int(frow.text)+1}, Col E")
+                                target_idx = (row_nota_label - 1) + 8 + shift
+                                frow.text = str(target_idx)
+                                if trow is not None: trow.text = str(target_idx)
+                                
+                                # Width: Col B (1) to Col K (10)
+                                if fcol is not None: fcol.text = "1"
+                                if tcol is not None: tcol.text = "10"
+                                print(f"DEBUG: Moved Blue Line to Row {target_idx + 1}, Col B-K")
                             elif orig_row >= (row_nota_label - 1):
                                 frow.text = str(orig_row + shift)
+                                if trow is not None:
+                                    trow.text = str(int(trow.text) + shift)
                                 print(f"DEBUG: Shifted Footer Drawing from Row {orig_row+1} to {int(frow.text)+1}")
                         
-                        # Handle 'to' for twoCellAnchor (if any)
-                        trow = anchor.find('.//xdr:to/xdr:row', namespaces=d_ns)
-                        if trow is not None:
-                            orig_trow = int(trow.text)
-                            if orig_trow < 10: continue
-                            if orig_trow == 50:
-                                trow.text = str((row_nota_label - 1) + 7 + shift)
-                            elif orig_trow >= (row_nota_label - 1):
-                                trow.text = str(orig_trow + shift)
-                    
                     modified_drawing_xml = etree.tostring(d_root, encoding='utf-8', xml_declaration=True)
+
+        # Final Surgical Check: If we shifted, signatures are at Nota + 7.
+        # Template Address Row is 52 (index 51).
+        # We MUST push it to Nota + 9 to avoid Blue Line overlap.
+        if n_muestras > threshold:
+            shift = n_muestras - threshold
+            # Address was originally at 52. Initial shift moved it to 52 + shift.
+            # We push it one more row to 53 + shift (Nota + 9).
+            _shift_rows(sheet_data, from_row=52 + shift, shift=1, ns=ns)
+            _shift_merged_cells(root, from_row=52 + shift, shift=1, ns=ns)
+            print(f"DEBUG: Pushed Address Row down from {52+shift} to {53+shift}")
 
         # 5. Serialize Sheet
         modified_sheet_xml = etree.tostring(root, encoding='utf-8', xml_declaration=True)
