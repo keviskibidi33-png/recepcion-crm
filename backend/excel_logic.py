@@ -159,8 +159,13 @@ def _duplicate_merged_cells(root: etree._Element, source_row_num: int, target_ro
         merged_cells_node.set('count', str(int(merged_cells_node.get('count', '0')) + len(new_merges)))
 
 class ExcelLogic:
-    def __init__(self, template_path: str):
-        self.template_path = template_path
+    def __init__(self, template_path: Optional[str] = None):
+        if template_path:
+            self.template_path = template_path
+        else:
+            # Default to templates/recepcion_template.xlsx relative to this file
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            self.template_path = os.path.join(base_dir, "templates", "recepcion_template.xlsx")
 
     def generar_excel_recepcion(self, recepcion: RecepcionMuestra) -> bytes:
         if not os.path.exists(self.template_path):
