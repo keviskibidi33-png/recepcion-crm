@@ -353,19 +353,8 @@ class ExcelLogic:
                                 print(f"DEBUG: Keeping Drawing at Row {orig_row+1} fixed in header")
                                 continue
                                 
-                            # Blue Line (Originally at Row 51 / index 50)
-                            if orig_row == 50:
-                                # Spacing: Signatures are at Nota + 6/7. 
-                                # We put Blue line at Nota + 10 for comfort.
-                                target_idx = (row_nota_label - 1) + 10 + shift
-                                frow.text = str(target_idx)
-                                if trow is not None: trow.text = str(target_idx)
-                                
-                                # Width: Col B (1) to Col K (10)
-                                if fcol is not None: fcol.text = "1"
-                                if tcol is not None: tcol.text = "10"
-                                print(f"DEBUG: Moved Blue Line to Row {target_idx + 1}, Col B-K")
-                            elif orig_row >= (row_nota_label - 1):
+                            # General Footer Shift (Signatures, Address, etc.)
+                            if orig_row >= (row_nota_label - 1):
                                 frow.text = str(orig_row + shift)
                                 if trow is not None:
                                     trow.text = str(int(trow.text) + shift)
@@ -373,15 +362,7 @@ class ExcelLogic:
                         
                     modified_drawing_xml = etree.tostring(d_root, encoding='utf-8', xml_declaration=True)
 
-        # Final Surgical Check: If we shifted, address Row shifts.
-        # Template Address Row is 52 (index 51).
-        # To match Blue Line at Nota + 10, we push Address to Nota + 12.
-        if n_muestras > threshold:
-            shift = n_muestras - threshold
-            # Push Address and footer labels below the expanded drawing area
-            _shift_rows(sheet_data, from_row=52 + shift, shift=3, ns=ns)
-            _shift_merged_cells(root, from_row=52 + shift, shift=3, ns=ns)
-            print(f"DEBUG: Pushed Address Row down to {55+shift}")
+        # 5. Serialize Sheet
 
         # 5. Serialize Sheet
         modified_sheet_xml = etree.tostring(root, encoding='utf-8', xml_declaration=True)
