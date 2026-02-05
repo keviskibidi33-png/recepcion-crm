@@ -17,8 +17,8 @@ A complete rewrite of the Excel generation logic using direct XML manipulation (
 | --- | --- |
 | A | Item (Index + 1) |
 | B | Código LEM |
-| C | Código Muestra (Cliente) |
-| D | *Empty/Decorative* |
+| C | *Merged/Empty* |
+| D | Identificación muestra (Description) |
 | E | Estructura |
 | F | f'c |
 | G | Fecha moldeo |
