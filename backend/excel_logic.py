@@ -132,6 +132,32 @@ def _shift_merged_cells(root: etree._Element, from_row: int, shift: int, ns: str
         if changed:
             mc.set('ref', ':'.join(new_parts))
 
+def _duplicate_merged_cells(root: etree._Element, source_row_num: int, target_row_num: int, ns: str):
+    merged_cells_node = root.find(f'{{{ns}}}mergeCells')
+    if merged_cells_node is None: return
+    
+    new_merges = []
+    for mc in merged_cells_node.findall(f'{{{ns}}}mergeCell'):
+        ref = mc.get('ref')
+        if not ref: continue
+        parts = ref.split(':')
+        if len(parts) != 2: continue
+        
+        c1, r1 = _parse_cell_ref(parts[0])
+        c2, r2 = _parse_cell_ref(parts[1])
+        
+        # If the merge is exactly on the source row (e.g. B23:C23)
+        if r1 == source_row_num and r2 == source_row_num:
+            new_ref = f"{c1}{target_row_num}:{c2}{target_row_num}"
+            new_merges.append(new_ref)
+            
+    for ref in new_merges:
+        mc = etree.SubElement(merged_cells_node, f'{{{ns}}}mergeCell')
+        mc.set('ref', ref)
+    
+    if new_merges:
+        merged_cells_node.set('count', str(int(merged_cells_node.get('count', '0')) + len(new_merges)))
+
 class ExcelLogic:
     def __init__(self, template_path: str):
         self.template_path = template_path
@@ -205,12 +231,18 @@ class ExcelLogic:
         
         if n_muestras > threshold:
             extra_rows = n_muestras - threshold
-            print(f"DEBUG: Shifting {extra_rows} rows from {row_nota_label}")
-            _shift_rows(sheet_data, row_nota_label, extra_rows, ns)
-            _shift_merged_cells(root, row_nota_label, extra_rows, ns)
+            # Shift from first row after the template table (Row 41 if threshold=18)
+            shift_start = data_start_row + threshold 
+            print(f"DEBUG: Shifting {extra_rows} rows from {shift_start}")
+            _shift_rows(sheet_data, shift_start, extra_rows, ns)
+            _shift_merged_cells(root, shift_start, extra_rows, ns)
             # Duplicate template row for data
+            # Row 23 is header-adjacent, Row 24 is inner (standard).
+            inner_row_source = data_start_row + 1 
             for i in range(threshold, n_muestras):
-                _duplicate_row_xml(sheet_data, data_start_row, data_start_row + i, ns)
+                target_row = data_start_row + i
+                _duplicate_row_xml(sheet_data, inner_row_source, target_row, ns)
+                _duplicate_merged_cells(root, inner_row_source, target_row, ns)
 
         # Refresh cache for writing
         rows_cache = {r.get('r'): r for r in sheet_data.findall(f'{{{ns}}}row')}
@@ -323,7 +355,9 @@ class ExcelLogic:
                                 
                             # Blue Line (Originally at Row 51 / index 50)
                             if orig_row == 50:
-                                target_idx = (row_nota_label - 1) + 8 + shift
+                                # Spacing: Signatures are at Nota + 6/7. 
+                                # We put Blue line at Nota + 10 for comfort.
+                                target_idx = (row_nota_label - 1) + 10 + shift
                                 frow.text = str(target_idx)
                                 if trow is not None: trow.text = str(target_idx)
                                 
@@ -339,16 +373,15 @@ class ExcelLogic:
                         
                     modified_drawing_xml = etree.tostring(d_root, encoding='utf-8', xml_declaration=True)
 
-        # Final Surgical Check: If we shifted, signatures are at Nota + 7.
+        # Final Surgical Check: If we shifted, address Row shifts.
         # Template Address Row is 52 (index 51).
-        # We MUST push it to Nota + 9 to avoid Blue Line overlap.
+        # To match Blue Line at Nota + 10, we push Address to Nota + 12.
         if n_muestras > threshold:
             shift = n_muestras - threshold
-            # Address was originally at 52. Initial shift moved it to 52 + shift.
-            # We push it one more row to 53 + shift (Nota + 9).
-            _shift_rows(sheet_data, from_row=52 + shift, shift=1, ns=ns)
-            _shift_merged_cells(root, from_row=52 + shift, shift=1, ns=ns)
-            print(f"DEBUG: Pushed Address Row down from {52+shift} to {53+shift}")
+            # Push Address and footer labels below the expanded drawing area
+            _shift_rows(sheet_data, from_row=52 + shift, shift=3, ns=ns)
+            _shift_merged_cells(root, from_row=52 + shift, shift=3, ns=ns)
+            print(f"DEBUG: Pushed Address Row down to {55+shift}")
 
         # 5. Serialize Sheet
         modified_sheet_xml = etree.tostring(root, encoding='utf-8', xml_declaration=True)
