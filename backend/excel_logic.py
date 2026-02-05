@@ -239,23 +239,23 @@ class ExcelLogic:
                 target_col = _num_to_col_letter(_col_letter_to_num(c) + 1 + offset_col)
                 write_cell(target_col, r, value, is_num)
 
-        write_to_neighbor("RECEPCIÓN N°:", recepcion.numero_recepcion)
+        write_cell('D', anchors.get("RECEPCIÓN N°:", ("A", 6))[1], recepcion.numero_recepcion)
         write_to_neighbor("COTIZACIÓN N°:", recepcion.numero_cotizacion or "-")
         write_to_neighbor("FECHA DE RECEPCIÓN:", format_dt(recepcion.fecha_recepcion))
         write_to_neighbor("OT:", recepcion.numero_ot)
         
-        # Hardcoded offsets for specific multiline fields if labels are found
-        write_cell('D', anchors.get("CLIENTE:", ("C", 10))[1], recepcion.cliente)
-        write_cell('D', anchors.get("DOMICILIO LEGAL:", ("C", 11))[1], recepcion.domicilio_legal)
-        write_cell('D', anchors.get("RUC:", ("C", 12))[1], recepcion.ruc)
-        write_cell('D', anchors.get("PERSONA DE CONTACTO:", ("C", 13))[1], recepcion.persona_contacto)
-        write_cell('D', anchors.get("EMAIL:", ("C", 14))[1], recepcion.email)
-        write_cell('H', anchors.get("TELÉFONO:", ("G", 14))[1], recepcion.telefono)
+        # Details (D/H offsets)
+        write_cell('D', anchors.get("CLIENTE :", ("C", 10))[1], recepcion.cliente)
+        write_cell('D', anchors.get("DOMICILIO LEGAL :", ("C", 11))[1], recepcion.domicilio_legal)
+        write_cell('D', anchors.get("RUC :", ("C", 12))[1], recepcion.ruc)
+        write_cell('D', anchors.get("PERSONA CONTACTO :", ("C", 13))[1], recepcion.persona_contacto)
+        write_cell('D', anchors.get("E-MAIL :", ("C", 14))[1], recepcion.email)
+        write_cell('H', anchors.get("TELÉFONO :", ("G", 14))[1], recepcion.telefono)
         
-        write_cell('D', anchors.get("SOLICITANTE:", ("C", 16))[1], recepcion.solicitante)
-        write_cell('D', anchors.get("DOMICILIO DEL SOLICITANTE:", ("C", 17))[1], recepcion.domicilio_solicitante)
-        write_cell('D', anchors.get("PROYECTO:", ("C", 18))[1], recepcion.proyecto)
-        write_cell('D', anchors.get("UBICACIÓN:", ("C", 19))[1], recepcion.ubicacion)
+        write_cell('D', anchors.get("SOLICITANTE :", ("C", 16))[1], recepcion.solicitante)
+        write_cell('D', anchors.get("SOLICITANTE :", ("C", 16))[1] + 1, recepcion.domicilio_solicitante)
+        write_cell('D', anchors.get("PROYECTO :", ("C", 18))[1], recepcion.proyecto)
+        write_cell('D', anchors.get("UBICACIÓN :", ("C", 19))[1], recepcion.ubicacion)
 
         # Samples Table
         for idx, m in enumerate(muestras):
@@ -277,9 +277,15 @@ class ExcelLogic:
         write_cell('D', footer_row, recepcion.observaciones or "", is_footer=True)
         
         # Labels for Fisica/Digital (Checkboxes in A)
-        # Assuming Fisica is 2 rows below Nota, Digital 4 rows below.
         if recepcion.emision_fisica: write_cell('A', footer_row + 2, "X", is_footer=True)
         if recepcion.emision_digital: write_cell('A', footer_row + 4, "X", is_footer=True)
+
+        # Signatures
+        row_entrega = anchors.get("ENTREGADO POR:", anchors.get("ENTREGADO POR:\n(CLIENTE)", ("A", 49)))[1]
+        write_cell('B', row_entrega, recepcion.entregado_por, is_footer=True)
+        
+        row_recibo = anchors.get("RECEPCIONADO POR:", anchors.get("RECEPCIONADO POR:\n(LABORATORIO GEOFAL)", ("F", 49)))[1]
+        write_cell('G', row_recibo, recepcion.recibido_por, is_footer=True)
 
         # 4. Serialize Sheet
         modified_sheet_xml = etree.tostring(root, encoding='utf-8', xml_declaration=True)

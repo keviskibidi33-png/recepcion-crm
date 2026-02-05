@@ -13,7 +13,8 @@
 - [x] Frontend Implementation & Form Refinement
     - [x] Update `OrdenForm.tsx` fields to match A-K mapping.
     - [x] Verify Iframe `CLOSE_MODAL` message logic.
-- [/] Verification & Testing
+- [x] Verification & Testing
     - [x] Create automated fidelity verification script.
     - [x] Perform manual Excel export tests (small and large data sets).
-    - [ ] Create `walkthrough.md` with proof of work.
+    - [x] Create `walkthrough.md` with proof of work.
+    - [x] **Surgical Refinements**: Fixed header overlaps and missing fields (Persona Contacto, Email, etc.).
