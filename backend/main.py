@@ -25,11 +25,26 @@ async def base_app_exception_handler(request, exc):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3002", "https://crm.geofal.com.pe", "https://recepcion.geofal.com.pe", "*"],
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://localhost:3002", 
+        "https://crm.geofal.com.pe", 
+        "https://recepcion.geofal.com.pe"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    import traceback
+    error_detail = traceback.format_exc()
+    print(f"ERROR: {error_detail}")
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Internal Server Error", "detail": str(exc)}
+    )
 
 
 app.include_router(router)

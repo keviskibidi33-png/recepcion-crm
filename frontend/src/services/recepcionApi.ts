@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { RecepcionMuestraData, RecepcionFilters } from '../types/recepcionTypes';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/ordenes';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.geofal.com.pe/api/ordenes';
 
 const api = axios.create({
     baseURL: API_BASE_URL,

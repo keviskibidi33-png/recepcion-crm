@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuración de base de datos
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://laboratorio_user:laboratorio_password_2025@localhost:5432/laboratorio_db"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    # Fallback for local development
+    DATABASE_URL = "postgresql://laboratorio_user:laboratorio_password_2025@localhost:5432/laboratorio_db"
 
 # Para desarrollo local con SQLite (alternativa)
 if DATABASE_URL.startswith("sqlite"):
