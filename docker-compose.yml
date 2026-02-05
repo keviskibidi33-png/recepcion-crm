@@ -26,7 +26,7 @@ services:
       dockerfile: Dockerfile
     container_name: recepcion-frontend
     ports:
-      - "3000:80"
+      - "3005:80"
     restart: always
     networks:
       - crm-network
