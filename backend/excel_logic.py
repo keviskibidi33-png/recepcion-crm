@@ -147,7 +147,8 @@ class ExcelLogic:
                 ss_xml_original = z.read('xl/sharedStrings.xml')
                 ss_root = etree.fromstring(ss_xml_original)
                 ns_ss = ss_root.nsmap.get(None, NAMESPACES['main'])
-                for si in ss_root.findall(f'{{{ns_ss}}}si'):
+                sis = ss_root.findall(f'{{{ns_ss}}}si')
+                for i, si in enumerate(sis):
                     t = si.find(f'{{{ns_ss}}}t')
                     if t is not None: shared_strings.append((t.text or "").strip())
                     else: shared_strings.append(''.join([x.text or '' for x in si.findall(f'.//{{{ns_ss}}}t')]).strip())
@@ -189,6 +190,7 @@ class ExcelLogic:
                     key = val.upper().strip()
                     c_name, _ = _parse_cell_ref(cell_el.get('r'))
                     if key not in anchors: # Take first occurrence
+                        print(f"DEBUG: Found anchor '{key}' at {c_name}{r_num}")
                         anchors[key] = (c_name, r_num)
 
         # 2. Dynamic Row Logic
@@ -203,6 +205,7 @@ class ExcelLogic:
         
         if n_muestras > threshold:
             extra_rows = n_muestras - threshold
+            print(f"DEBUG: Shifting {extra_rows} rows from {row_nota_label}")
             _shift_rows(sheet_data, row_nota_label, extra_rows, ns)
             _shift_merged_cells(root, row_nota_label, extra_rows, ns)
             # Duplicate template row for data
@@ -240,9 +243,9 @@ class ExcelLogic:
                 write_cell(target_col, r, value, is_num)
 
         write_cell('D', anchors.get("RECEPCIÓN N°:", ("A", 6))[1], recepcion.numero_recepcion)
-        write_to_neighbor("COTIZACIÓN N°:", recepcion.numero_cotizacion or "-")
+        write_to_neighbor("COTIZACIÓN N°:", recepcion.numero_cotizacion or "-", offset_col=2)
         write_to_neighbor("FECHA DE RECEPCIÓN:", format_dt(recepcion.fecha_recepcion))
-        write_to_neighbor("OT:", recepcion.numero_ot)
+        write_to_neighbor("OT N°:", recepcion.numero_ot)
         
         # Details (D/H offsets)
         write_cell('D', anchors.get("CLIENTE :", ("C", 10))[1], recepcion.cliente)
@@ -276,21 +279,70 @@ class ExcelLogic:
         footer_row = row_nota_label
         write_cell('D', footer_row, recepcion.observaciones or "", is_footer=True)
         
-        # Labels for Fisica/Digital (Checkboxes in A)
-        if recepcion.emision_fisica: write_cell('A', footer_row + 2, "X", is_footer=True)
-        if recepcion.emision_digital: write_cell('A', footer_row + 4, "X", is_footer=True)
+        # Checkboxes
+        write_cell('B', footer_row + 3, "X" if recepcion.emision_fisica else "", is_footer=True)
+        write_cell('B', footer_row + 4, "X" if recepcion.emision_digital else "", is_footer=True)
+
+        # Fecha Culminacion
+        write_cell('H', footer_row + 3, format_dt(recepcion.fecha_estimada_culminacion), is_footer=True)
 
         # Signatures
-        row_entrega = anchors.get("ENTREGADO POR:", anchors.get("ENTREGADO POR:\n(CLIENTE)", ("A", 49)))[1]
-        write_cell('B', row_entrega, recepcion.entregado_por, is_footer=True)
-        
-        row_recibo = anchors.get("RECEPCIONADO POR:", anchors.get("RECEPCIONADO POR:\n(LABORATORIO GEOFAL)", ("F", 49)))[1]
-        write_cell('G', row_recibo, recepcion.recibido_por, is_footer=True)
+        write_cell('D', footer_row + 6, recepcion.entregado_por or "", is_footer=True)
+        write_cell('I', footer_row + 6, recepcion.recibido_por or "", is_footer=True)
 
-        # 4. Serialize Sheet
+        # 4. Handle Drawings (Blue Line Shift)
+        drawing_file = 'xl/drawings/drawing1.xml'
+        modified_drawing_xml = None
+        if n_muestras > threshold:
+            shift = n_muestras - threshold
+            with zipfile.ZipFile(self.template_path, 'r') as z:
+                if drawing_file in z.namelist():
+                    draw_xml = z.read(drawing_file)
+                    d_root = etree.fromstring(draw_xml)
+                    d_ns = {'xdr': 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'}
+                    
+                    # Drawing 0 is the blue line.
+                    # Anchors index are 0-based. Row 1 is text index 0.
+                    # We want absolute Row 57 -> index 56.
+                    # We want absolute Col E -> index 4.
+                    
+                    anchors_list = d_root.xpath('//xdr:twoCellAnchor | //xdr:oneCellAnchor', namespaces=d_ns)
+                    for anchor in anchors_list:
+                        frow = anchor.find('.//xdr:from/xdr:row', namespaces=d_ns)
+                        fcol = anchor.find('.//xdr:from/xdr:col', namespaces=d_ns)
+                        if frow is not None:
+                            orig_row = int(frow.text)
+                            
+                            # Logo Protection (Header objects)
+                            if orig_row < 10:
+                                print(f"DEBUG: Keeping Drawing at Row {orig_row+1} fixed in header")
+                                continue
+                                
+                            # Blue Line (Originally at Row 51 / index 50)
+                            if orig_row == 50:
+                                frow.text = str((row_nota_label - 1) + 7 + shift)
+                                if fcol is not None: fcol.text = "4" # Center on Column E
+                                print(f"DEBUG: Moved Blue Line (orig index 50) to Row {int(frow.text)+1}, Col E")
+                            elif orig_row >= (row_nota_label - 1):
+                                frow.text = str(orig_row + shift)
+                                print(f"DEBUG: Shifted Footer Drawing from Row {orig_row+1} to {int(frow.text)+1}")
+                        
+                        # Handle 'to' for twoCellAnchor (if any)
+                        trow = anchor.find('.//xdr:to/xdr:row', namespaces=d_ns)
+                        if trow is not None:
+                            orig_trow = int(trow.text)
+                            if orig_trow < 10: continue
+                            if orig_trow == 50:
+                                trow.text = str((row_nota_label - 1) + 7 + shift)
+                            elif orig_trow >= (row_nota_label - 1):
+                                trow.text = str(orig_trow + shift)
+                    
+                    modified_drawing_xml = etree.tostring(d_root, encoding='utf-8', xml_declaration=True)
+
+        # 5. Serialize Sheet
         modified_sheet_xml = etree.tostring(root, encoding='utf-8', xml_declaration=True)
 
-        # 5. Reconstruct Shared Strings (Cleanly)
+        # 6. Reconstruct Shared Strings (Cleanly)
         ss_root_new = etree.Element(f'{{{ns}}}sst', nsmap={None: ns})
         for text in shared_strings:
             si = etree.SubElement(ss_root_new, f'{{{ns}}}si')
@@ -300,7 +352,7 @@ class ExcelLogic:
         ss_root_new.set('uniqueCount', str(len(shared_strings)))
         modified_ss_xml = etree.tostring(ss_root_new, encoding='utf-8', xml_declaration=True)
 
-        # 6. Build Final ZIP
+        # 7. Build Final ZIP
         output = io.BytesIO()
         with zipfile.ZipFile(self.template_path, 'r') as z_in:
             with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as z_out:
@@ -309,6 +361,8 @@ class ExcelLogic:
                         z_out.writestr(item, modified_sheet_xml)
                     elif item == 'xl/sharedStrings.xml':
                         z_out.writestr(item, modified_ss_xml)
+                    elif item == drawing_file and modified_drawing_xml is not None:
+                        z_out.writestr(item, modified_drawing_xml)
                     else:
                         z_out.writestr(item, z_in.read(item))
         

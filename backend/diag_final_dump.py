@@ -15,15 +15,15 @@ def get_shared_strings(z):
     return strings
 
 def dump_header():
-    file_path = 'backend/SURGICAL_VALIDATION.xlsx'
+    file_path = 'backend/SURGICAL_VALIDATION_FINAL_V6.xlsx'
     with zipfile.ZipFile(file_path, 'r') as z:
         strings = get_shared_strings(z)
         sheet_content = z.read('xl/worksheets/sheet1.xml')
         sheet_root = etree.fromstring(sheet_content)
         ns = sheet_root.nsmap.get(None, NAMESPACES['main'])
         
-        print(f"\n--- FINAL HEADER DUMP (Rows 6-20) ---")
-        for r_num in range(6, 21):
+        print(f"\n--- HEADER DUMP (Rows 1-10) ---")
+        for r_num in range(1, 11):
             row_el = sheet_root.find(f'.//{{{ns}}}row[@r="{r_num}"]')
             if row_el is not None:
                 line = f"Row {r_num:2}: "
