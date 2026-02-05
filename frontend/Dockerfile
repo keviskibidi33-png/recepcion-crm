@@ -1,4 +1,4 @@
-FROM node:18-alpine as build
+FROM node:18-slim as build
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ RUN npm ci
 
 COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
-RUN npm run build
+RUN npm run build --verbose
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
