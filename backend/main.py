@@ -25,7 +25,7 @@ async def base_app_exception_handler(request, exc):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3002", "*"],
+    allow_origins=["http://localhost:3000", "http://localhost:3002", "https://crm.geofal.com.pe", "https://recepcion.geofal.com.pe", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
