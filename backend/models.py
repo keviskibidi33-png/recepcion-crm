@@ -60,6 +60,7 @@ class RecepcionMuestra(Base):
     
     # Información adicional
     observaciones = Column(Text, nullable=True, comment="Observaciones generales")
+    
     aperturada_por = Column(String(100), nullable=True, comment="Persona que aperturó la recepción")
     designada_a = Column(String(100), nullable=True, comment="Persona designada para el trabajo")
     estado = Column(String(20), nullable=False, default="PENDIENTE", comment="Estado de la recepción")
