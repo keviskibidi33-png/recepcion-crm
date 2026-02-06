@@ -39,5 +39,11 @@ export const recepcionApi = {
         document.body.appendChild(link);
         link.click();
         link.remove();
+    },
+
+    buscarClientes: async (search: string): Promise<any> => {
+        const rootUrl = API_BASE_URL.replace('/api/ordenes', '');
+        const response = await axios.get(`${rootUrl}/clientes`, { params: { search } });
+        return response.data;
     }
 };

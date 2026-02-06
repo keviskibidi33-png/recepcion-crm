@@ -143,6 +143,48 @@ export default function OrdenForm() {
         }
     });
 
+    const [clienteSearch, setClienteSearch] = useState('');
+    const [clientes, setClientes] = useState<any[]>([]);
+    const [showClienteDropdown, setShowClienteDropdown] = useState(false);
+
+    // Debounced client search
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (clienteSearch.length >= 2) {
+                try {
+                    const response = await recepcionApi.buscarClientes(clienteSearch);
+                    setClientes(response.data || []);
+                    setShowClienteDropdown(true);
+                } catch (err) {
+                    setClientes([]);
+                }
+            } else {
+                setClientes([]);
+                setShowClienteDropdown(false);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [clienteSearch]);
+
+    // Handle selecting a client from dropdown
+    const handleSelectCliente = (c: any) => {
+        // Essential fields
+        setValue('cliente', c.nombre, { shouldValidate: true });
+        setValue('ruc', c.ruc || '', { shouldValidate: true });
+        setValue('domicilio_legal', c.direccion || '', { shouldValidate: true });
+        setValue('persona_contacto', c.contacto || '', { shouldValidate: true });
+        setValue('email', c.email || '', { shouldValidate: true });
+        setValue('telefono', c.telefono || '', { shouldValidate: true });
+
+        // Fill Solicitante (usually the same as client initially)
+        setValue('solicitante', c.nombre, { shouldValidate: true });
+        setValue('domicilio_solicitante', c.direccion || '', { shouldValidate: true });
+
+        setClienteSearch(c.nombre);
+        setShowClienteDropdown(false);
+        toast.success(`Cliente ${c.nombre} seleccionado`);
+    };
+
     const { fields, append, remove, insert } = useFieldArray({
         control,
         name: 'muestras'
@@ -204,6 +246,10 @@ export default function OrdenForm() {
             // ... existing reset logic check ...
             // Assuming minimal changes needed here for now
             reset(existingOrden as any);
+            // Also sync search field
+            if (existingOrden.cliente) {
+                setClienteSearch(existingOrden.cliente);
+            }
         }
     }, [existingOrden, reset]);
 
@@ -538,12 +584,39 @@ export default function OrdenForm() {
                     {/* SECTION 1: FACTURACIÓN */}
                     <Section title="DATOS PARA FACTURACIÓN Y PERSONA DE CONTACTO PARA EL ENVÍO DEL INFORME DE LABORATORIO">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <InputField
-                                label="Cliente:"
-                                {...register('cliente')}
-                                error={errors.cliente?.message}
-                                placeholder="CONSTRUCTORA PROYECTOS S.A.C." // Realistic Client
-                            />
+                            <div className="relative">
+                                <InputField
+                                    label="Cliente:"
+                                    {...register('cliente')}
+                                    onChange={(e) => {
+                                        register('cliente').onChange(e);
+                                        setClienteSearch(e.target.value);
+                                        setShowClienteDropdown(true);
+                                    }}
+                                    onFocus={() => { if (clientes.length > 0) setShowClienteDropdown(true); }}
+                                    error={errors.cliente?.message}
+                                    placeholder="Buscar por nombre o RUC..."
+                                    autoComplete="off"
+                                />
+                                {showClienteDropdown && clientes.length > 0 && (
+                                    <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-2xl max-h-64 overflow-auto py-2">
+                                        {clientes.map((c: any) => (
+                                            <div
+                                                key={c.id}
+                                                onClick={() => handleSelectCliente(c)}
+                                                className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors"
+                                            >
+                                                <div className="text-[11px] font-black text-[#003366] uppercase tracking-tight">{c.nombre}</div>
+                                                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                                                    {c.ruc && <span className="text-[9px] font-black text-slate-400 tracking-widest uppercase">RUC: {c.ruc}</span>}
+                                                    {c.contacto && <span className="text-[9px] font-black text-blue-400 tracking-widest uppercase truncate max-w-[200px]">CONTACTO: {c.contacto}</span>}
+                                                </div>
+                                                {c.direccion && <div className="text-[9px] font-bold text-slate-300 uppercase mt-0.5 truncate italic">{c.direccion}</div>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                             <InputField
                                 label="RUC:"
                                 {...register('ruc')}
