@@ -42,7 +42,8 @@ export const recepcionApi = {
     },
 
     buscarClientes: async (search: string): Promise<any> => {
-        const rootUrl = API_BASE_URL.replace('/api/ordenes', '');
+        // Ensure we strip /api/ordenes and any trailing slash from the base to get the root
+        const rootUrl = API_BASE_URL.replace(/\/api\/ordenes\/?$/, '').replace(/\/$/, '');
         const response = await axios.get(`${rootUrl}/clientes`, { params: { search } });
         return response.data;
     }

@@ -32,13 +32,14 @@ export default function RecepcionModule() {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
 
-    const { data: ordenes, isLoading } = useQuery(
+    const { data: ordenes, isLoading, isError, error: queryError, refetch } = useQuery(
         'recepciones-migration',
         () => recepcionApi.listar(),
         {
             onError: (error: any) => {
                 toast.error(`Error cargando recepciones: ${error.message}`)
-            }
+            },
+            retry: 1
         }
     )
 
@@ -147,6 +148,18 @@ export default function RecepcionModule() {
                     Array(6).fill(0).map((_, i) => (
                         <div key={i} className="h-64 bg-slate-100 animate-pulse rounded-2xl border border-slate-200" />
                     ))
+                ) : isError ? (
+                    <div className="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-red-200">
+                        <RefreshCw className="h-16 w-16 text-red-200 mx-auto mb-4 animate-spin-slow" />
+                        <p className="text-slate-600 font-bold uppercase tracking-widest">Error de conexión al servidor</p>
+                        <p className="text-slate-400 text-sm mt-2">{(queryError as any)?.message}</p>
+                        <button
+                            onClick={() => refetch()}
+                            className="mt-6 px-6 py-2 bg-slate-900 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-slate-800 transition-all"
+                        >
+                            Reintentar Conexión
+                        </button>
+                    </div>
                 ) : filteredData?.length === 0 ? (
                     <div className="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
                         <FileSpreadsheet className="h-16 w-16 text-slate-200 mx-auto mb-4" />
