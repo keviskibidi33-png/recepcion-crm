@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { RecepcionMuestraData, RecepcionFilters } from '../types/recepcionTypes';
+import { RecepcionMuestraData } from '../types/recepcionTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.geofal.com.pe/api/ordenes';
 

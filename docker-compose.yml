@@ -1,29 +1,13 @@
 version: '3.8'
 
 services:
-  recepcion-backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: recepcion-backend
-    ports:
-      - "8002:8002"
-    volumes:
-      # Mount templates/ so you can update them without rebuilding
-      - ./backend/templates:/app/templates
-    environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@production-host:5432/laboratorio_db}
-      - SECRET_KEY=${SECRET_KEY:-supersecretkey}
-      - ALGORITHM=HS256
-      - ACCESS_TOKEN_EXPIRE_MINUTES=30
-    restart: always
-    networks:
-      - crm-network
-
+  # Recepcion Frontend (Static Build - Points to Main API)
   recepcion-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=https://api.geofal.com.pe/api/ordenes
     container_name: recepcion-frontend
     ports:
       - "3005:80"
