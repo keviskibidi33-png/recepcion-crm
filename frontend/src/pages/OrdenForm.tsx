@@ -56,6 +56,7 @@ const formSchema = z.object({
     emision_digital: z.boolean(),
     entregado_por: z.string().min(1, "Requerido"),
     recibido_por: z.string().min(1, "Requerido"),
+    observaciones: z.string().optional(),
     muestras: z.array(sampleSchema).min(1, "Mínimo una muestra")
 });
 
@@ -667,6 +668,17 @@ export default function OrdenForm() {
                                 placeholder="ASIST. MARIA" // Realistic name
                             />
                         </div>
+                    </div>
+
+                    {/* SECTION 5: NOTAS */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+                        <TextareaField
+                            label="Nota / Observaciones (Aparecerá en el Excel):"
+                            {...register('observaciones')}
+                            error={errors.observaciones?.message}
+                            placeholder="Escriba aquí cualquier observación adicional..."
+                            rows={3}
+                        />
                     </div>
 
                     {/* FORM FOOTER */}
