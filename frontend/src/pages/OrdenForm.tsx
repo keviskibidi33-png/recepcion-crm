@@ -180,6 +180,9 @@ export default function OrdenForm() {
         setValue('solicitante', c.nombre, { shouldValidate: true });
         setValue('domicilio_solicitante', c.direccion || '', { shouldValidate: true });
 
+        // Entregado por: Link to contact person
+        setValue('entregado_por', c.contacto || '', { shouldValidate: true });
+
         setClienteSearch(c.nombre);
         setShowClienteDropdown(false);
         toast.success(`Cliente ${c.nombre} seleccionado`);
@@ -433,15 +436,15 @@ export default function OrdenForm() {
                                 <thead>
                                     <tr className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-900 border-b border-slate-100">
                                         <th className="px-4 py-4 w-12 text-center">N°</th>
-                                        <th className="px-2 py-4">Código LEM</th>
-                                        <th className="px-2 py-4">Identificación</th>
+                                        <th className="px-2 py-4 w-28">Código LEM</th>
+                                        <th className="px-2 py-4 w-28">Identificación</th>
                                         <th className="px-2 py-4">Estructura</th>
-                                        <th className="px-2 py-4 text-center">F'c</th>
-                                        <th className="px-2 py-4 text-center">Fecha moldeo</th>
-                                        <th className="px-2 py-4 text-center">Hora</th>
-                                        <th className="px-2 py-4 text-center">Edad</th>
-                                        <th className="px-2 py-4 text-center">Fecha rotura</th>
-                                        <th className="px-2 py-4 text-center">Densidad</th>
+                                        <th className="px-2 py-4 w-16 text-center">F'c</th>
+                                        <th className="px-2 py-4 w-24 text-center">Fecha moldeo</th>
+                                        <th className="px-2 py-4 w-12 text-center">Hora</th>
+                                        <th className="px-2 py-4 w-12 text-center">Edad</th>
+                                        <th className="px-2 py-4 w-24 text-center">Fecha rotura</th>
+                                        <th className="px-2 py-4 w-16 text-center">Densidad</th>
                                         <th className="px-4 py-4 w-12 text-center"></th>
                                     </tr>
                                 </thead>
@@ -460,18 +463,25 @@ export default function OrdenForm() {
                                                         {...register(`muestras.${index}.item_numero`, { valueAsNumber: true })}
                                                     />
                                                 </td>
-                                                <td className="px-1 py-3 focus-within:z-10">
+                                                <td className="px-1 py-3 w-28 focus-within:z-10">
                                                     <input
                                                         {...register(`muestras.${index}.codigo_muestra_lem`)}
+                                                        onBlur={(e) => {
+                                                            const val = e.target.value.trim();
+                                                            if (/^\d+$/.test(val)) {
+                                                                const year = new Date().getFullYear().toString().slice(-2);
+                                                                setValue(`muestras.${index}.codigo_muestra_lem`, `${val}-CO-${year}`, { shouldValidate: true });
+                                                            }
+                                                        }}
                                                         className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.codigo_muestra_lem ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="1483-CD-26"
+                                                        placeholder="1483"
                                                     />
                                                 </td>
-                                                <td className="px-1 py-3">
+                                                <td className="px-1 py-3 w-28">
                                                     <input
                                                         {...register(`muestras.${index}.identificacion_muestra`)}
                                                         className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.identificacion_muestra ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="E-01 / V-1.02" // Realistic sample ID
+                                                        placeholder="E-01"
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3">
