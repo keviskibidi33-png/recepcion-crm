@@ -46,5 +46,16 @@ export const recepcionApi = {
         const rootUrl = API_BASE_URL.replace(/\/api\/ordenes\/?$/, '').replace(/\/$/, '');
         const response = await axios.get(`${rootUrl}/clientes`, { params: { search } });
         return response.data;
+    },
+
+    // --- PLANTILLAS DE PROYECTO ---
+    buscarPlantillas: async (q: string): Promise<any[]> => {
+        const response = await api.get('/plantillas/buscar', { params: { q } });
+        return response.data;
+    },
+
+    crearPlantilla: async (data: any): Promise<any> => {
+        const response = await api.post('/plantillas', data);
+        return response.data;
     }
 };

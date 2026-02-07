@@ -147,6 +147,79 @@ export default function OrdenForm() {
     const [clientes, setClientes] = useState<any[]>([]);
     const [showClienteDropdown, setShowClienteDropdown] = useState(false);
 
+    // --- TEMPLATES LOGIC ---
+    const [templateSearch, setTemplateSearch] = useState('');
+    const [templates, setTemplates] = useState<any[]>([]);
+    const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (templateSearch.length >= 2) {
+                try {
+                    const response = await recepcionApi.buscarPlantillas(templateSearch);
+                    setTemplates(response || []);
+                    setShowTemplateDropdown(true);
+                } catch (err) {
+                    setTemplates([]);
+                }
+            } else {
+                setTemplates([]);
+                setShowTemplateDropdown(false);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [templateSearch]);
+
+    const handleSelectTemplate = (t: any) => {
+        // Populate ALL fields
+        setValue('cliente', t.cliente, { shouldValidate: true });
+        setValue('ruc', t.ruc, { shouldValidate: true });
+        setValue('domicilio_legal', t.domicilio_legal, { shouldValidate: true });
+        setValue('persona_contacto', t.persona_contacto || '', { shouldValidate: true });
+        setValue('email', t.email || '', { shouldValidate: true });
+        setValue('telefono', t.telefono || '', { shouldValidate: true });
+        setValue('solicitante', t.solicitante, { shouldValidate: true });
+        setValue('domicilio_solicitante', t.domicilio_solicitante, { shouldValidate: true });
+        setValue('proyecto', t.proyecto, { shouldValidate: true });
+        setValue('ubicacion', t.ubicacion, { shouldValidate: true });
+
+        // Logistics
+        setValue('entregado_por', t.persona_contacto || '', { shouldValidate: true });
+
+        setTemplateSearch(t.nombre_plantilla);
+        setClienteSearch(t.cliente);
+        setShowTemplateDropdown(false);
+        toast.success(`Plantilla "${t.nombre_plantilla}" cargada`);
+    };
+
+    const handleSaveAsTemplate = async () => {
+        const currentValues = watch();
+        const templateName = window.prompt("Nombre para esta proyecto recepccion (ej. Edificio Mirador):", currentValues.proyecto);
+
+        if (!templateName) return;
+
+        try {
+            const templateData = {
+                nombre_plantilla: templateName,
+                cliente: currentValues.cliente,
+                ruc: currentValues.ruc,
+                domicilio_legal: currentValues.domicilio_legal,
+                persona_contacto: currentValues.persona_contacto,
+                email: currentValues.email,
+                telefono: currentValues.telefono,
+                solicitante: currentValues.solicitante,
+                domicilio_solicitante: currentValues.domicilio_solicitante,
+                proyecto: currentValues.proyecto,
+                ubicacion: currentValues.ubicacion
+            };
+
+            await recepcionApi.crearPlantilla(templateData);
+            toast.success("¡Proyecto guardado como plantilla!");
+        } catch (err: any) {
+            toast.error("Error guardando plantilla: " + (err.response?.data?.detail || err.message));
+        }
+    };
+
     // Debounced client search
     useEffect(() => {
         const timer = setTimeout(async () => {
@@ -404,6 +477,48 @@ export default function OrdenForm() {
                         toast.error("Por favor revise los campos en rojo");
                     }
                 })} className="space-y-12">
+                    {/* QUICK LOAD SECTION */}
+                    <div className="bg-[#003366] rounded-2xl p-8 shadow-xl border-b-4 border-blue-600 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <FileText className="h-24 w-24 text-white" />
+                        </div>
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-end gap-6">
+                            <div className="flex-1">
+                                <label className="text-[11px] font-black text-blue-100 uppercase tracking-widest mb-3 block">
+                                    ⚡ CARGA RÁPIDA (Buscador de Proyectos Recepción):
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={templateSearch}
+                                        onChange={(e) => setTemplateSearch(e.target.value)}
+                                        placeholder="Escribe el nombre del proyecto o cliente para autocompletar todo..."
+                                        className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-200/50 focus:outline-none focus:ring-4 focus:ring-white/10 transition-all font-bold"
+                                    />
+                                    {showTemplateDropdown && templates.length > 0 && (
+                                        <div className="absolute z-50 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-2xl max-h-64 overflow-auto py-2">
+                                            {templates.map((t: any) => (
+                                                <div
+                                                    key={t.id}
+                                                    onClick={() => handleSelectTemplate(t)}
+                                                    className="px-6 py-4 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors"
+                                                >
+                                                    <div className="text-[12px] font-black text-[#003366] uppercase">{t.nombre_plantilla}</div>
+                                                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase">
+                                                        {t.cliente} • {t.proyecto}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="text-blue-200/80 text-[10px] font-bold max-w-xs leading-relaxed uppercase tracking-tighter">
+                                <span className="text-white">¿Cómo funciona?</span><br />
+                                Busch un proyecto guardado para llenar el 100% de los datos del cliente e informe automáticamente. Si el proyecto es nuevo, llénalo una vez y dale a "Guardar como plantilla" abajo.
+                            </div>
+                        </div>
+                    </div>
 
                     {/* TOP SECTION: IDs */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
@@ -693,6 +808,16 @@ export default function OrdenForm() {
                             placeholder="CALLE LOS PINOS 456, MIRAFLORES, LIMA" // Realistic Location
                             rows={2}
                         />
+                        <div className="flex justify-end pt-4">
+                            <button
+                                type="button"
+                                onClick={handleSaveAsTemplate}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-blue-100 transition-all border border-blue-200"
+                            >
+                                <Save className="h-3.5 w-3.5" />
+                                Guardar estos datos como Plantilla (Proyecto)
+                            </button>
+                        </div>
                     </Section>
 
                     {/* SECTION 3: FECHAS Y EMISION */}
