@@ -17,9 +17,13 @@ import {
     CreditCard,
     FileText,
     Truck,
-    Check
+    Check,
+    CheckCircle2,
+    XCircle,
+    Loader2
 } from 'lucide-react';
 import { recepcionApi } from '../services/recepcionApi';
+import { useFormPersist } from '../hooks/use-form-persist';
 
 // Validation Schema
 // Validation Schema
@@ -92,6 +96,19 @@ export default function OrdenForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
 
+    // Search status state for "Premium" interface
+    const [recepcionStatus, setRecepcionStatus] = useState<{
+        estado: 'idle' | 'buscando' | 'disponible' | 'ocupado';
+        mensaje?: string;
+        formatos?: {
+            recepcion: boolean;
+            verificacion: boolean;
+            compresion: boolean;
+        };
+    }>({ estado: 'idle' });
+
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
     const isEditMode = !!id;
 
     // Helper to handle closing/return
@@ -115,33 +132,35 @@ export default function OrdenForm() {
         }
     );
 
-    const {
-        register,
-        control,
-        handleSubmit,
-        reset,
-        watch,
-        setValue,
-        formState: { errors }
-    } = useForm<FormValues>({
-        resolver: zodResolver(formSchema) as any,
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
         defaultValues: {
-            fecha_recepcion: getFormattedDate(),
-            fecha_estimada_culminacion: getFormattedDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
-            emision_digital: true,
-            emision_fisica: false,
             muestras: [{
-                item_numero: 1,
+                identificacion_muestra: "",
+                estructura: "",
                 fc_kg_cm2: DEFAULT_FC,
                 edad: DEFAULT_EDAD,
-                identificacion_muestra: '',
-                estructura: '',
-                fecha_moldeo: '',
-                fecha_rotura: '',
                 requiere_densidad: false
             }]
         }
     });
+
+    const { register, control, handleSubmit, setValue, watch, reset, formState: { errors } } = form;
+
+    const { fields, append, remove, insert } = useFieldArray({
+        control,
+        name: 'muestras'
+    });
+
+    // Memoize form methods to avoid re-triggering persistence effects
+    const formMethodsMemo = React.useMemo(() => ({
+        watch,
+        setValue,
+        reset
+    }), [watch, setValue, reset]);
+
+    // Local Storage Persistence
+    const { clearSavedData, hasSavedData } = useFormPersist(`recepcion-form-${id || 'new'}`, formMethodsMemo as any, !id); // Enabled only if creating new
 
     const [clienteSearch, setClienteSearch] = useState('');
     const [clientes, setClientes] = useState<any[]>([]);
@@ -261,10 +280,7 @@ export default function OrdenForm() {
         toast.success(`Cliente ${c.nombre} seleccionado`);
     };
 
-    const { fields, append, remove, insert } = useFieldArray({
-        control,
-        name: 'muestras'
-    });
+
 
     // Handle Cloning
     const handleClone = (index: number) => {
@@ -342,7 +358,10 @@ export default function OrdenForm() {
             };
 
             if (isEditMode) {
-                toast.error('Actualización no habilitada en este demo');
+                await recepcionApi.actualizar(Number(id), formattedData as any);
+                toast.success('¡Recepción actualizada!');
+                queryClient.invalidateQueries('recepciones-migration');
+                handleClose();
             } else {
                 const newRecepcion = await recepcionApi.crear(formattedData as any);
                 toast.success('¡Recepción creada!');
@@ -411,6 +430,46 @@ export default function OrdenForm() {
         }
     };
 
+    // SEARCH LOGIC FOR "PREMIUM" INTERFACE
+    // SEARCH LOGIC FOR "PREMIUM" INTERFACE
+    const buscarEstadoRecepcion = async (numero: string) => {
+        if (!numero || numero.length < 3) return;
+
+        setRecepcionStatus({ estado: 'buscando' });
+
+        try {
+            const data = await recepcionApi.validarEstado(numero);
+
+            if (data.exists) {
+                setRecepcionStatus({
+                    estado: 'ocupado',
+                    mensaje: `⚠️ Recepción ya registrada hace poco (Cliente: ${data.cliente || 'Desconocido'})`,
+                    formatos: {
+                        recepcion: data.recepcion?.status === 'COMPLETADO' || data.recepcion?.status === 'PENDIENTE',
+                        verificacion: data.verificacion?.status === 'COMPLETADO' || data.verificacion?.status === 'completado',
+                        compresion: data.compresion?.status === 'COMPLETADO' || data.compresion?.status === 'en_proceso' || data.compresion?.status === 'completado'
+                    }
+                });
+            } else {
+                setRecepcionStatus({
+                    estado: 'disponible',
+                    mensaje: '✅ Numero Disponible para registro',
+                    formatos: {
+                        recepcion: false,
+                        verificacion: false,
+                        compresion: false
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error buscando recepción:', error);
+            setRecepcionStatus({
+                estado: 'disponible',
+                mensaje: '⚠️ Sin conexión con el servidor - Ingreso manual habilitado ✅'
+            });
+        }
+    };
+
     if (isEditMode && isLoadingOrden) return <div className="p-20 text-center font-black uppercase tracking-widest text-zinc-300">Cargando Datos...</div>;
 
     return (
@@ -426,8 +485,21 @@ export default function OrdenForm() {
                             >
                                 <ChevronLeft className="h-6 w-6" />
                             </button>
-                            <h1 className="text-xl font-black text-[#003366] uppercase tracking-tight">
+                            <h1 className="text-xl font-black text-[#003366] uppercase tracking-tight flex items-center gap-4">
                                 Recepción de Muestra Cilíndricas de Concreto
+                                {hasSavedData && (
+                                    <div className="flex items-center animate-in fade-in duration-300 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                                        <span className="text-[10px] text-amber-700 mr-2 font-medium tracking-normal normal-case">Borrador guardado</span>
+                                        <button
+                                            type="button"
+                                            onClick={clearSavedData}
+                                            className="p-1 text-amber-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                            title="Descartar borrador y limpiar formulario"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                )}
                             </h1>
                         </div>
                     </div>
@@ -523,12 +595,76 @@ export default function OrdenForm() {
                     {/* TOP SECTION: IDs */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <InputField
-                                label="Recepción Nº:"
-                                {...register('numero_recepcion')}
-                                error={errors.numero_recepcion?.message}
-                                placeholder="193-26"
-                            />
+                            <div className="relative">
+                                <InputField
+                                    label="Recepción Nº:"
+                                    {...register('numero_recepcion')}
+                                    onBlur={(e) => {
+                                        let value = e.target.value.trim().toUpperCase();
+                                        if (value) {
+                                            // Smart Suffix Logic (-26 default)
+                                            // Allow custom suffixes like -A, -1, or manual -25
+                                            const hasYearSuffix = /-\d{2}$/.test(value);
+                                            const hasExtendedSuffix = /-\d{2}-[A-Z0-9]+$/.test(value);
+
+                                            if (!hasYearSuffix && !hasExtendedSuffix) {
+                                                value = value + '-26';
+                                            }
+
+                                            // Update UI and State
+                                            e.target.value = value;
+                                            setValue('numero_recepcion', value, { shouldValidate: true });
+                                        }
+
+                                        buscarEstadoRecepcion(value);
+                                    }}
+                                    error={errors.numero_recepcion?.message}
+                                    placeholder="193-26"
+                                    style={{ paddingRight: '120px' }}
+                                />
+                                {/* Premium Status Indicator with Icons */}
+                                <div className="absolute right-3 top-[32px] flex flex-col items-end gap-1.5 min-w-[100px]">
+                                    {recepcionStatus.estado === 'buscando' && (
+                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full border border-blue-100 animate-pulse">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            <span className="text-[9px] font-black uppercase tracking-tighter">Buscando...</span>
+                                        </div>
+                                    )}
+                                    {recepcionStatus.estado === 'disponible' && (
+                                        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-sm animate-in fade-in zoom-in duration-300 transition-colors ${Object.values(recepcionStatus.formatos || {}).some(v => v)
+                                            ? 'bg-amber-50 text-amber-600 border-amber-100'
+                                            : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                            }`}>
+                                            <CheckCircle2 className="h-3 w-3" />
+                                            <span className="text-[9px] font-black uppercase tracking-tighter">Disponible</span>
+                                        </div>
+                                    )}
+                                    {recepcionStatus.estado === 'ocupado' && (
+                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full border border-rose-100 shadow-sm animate-in fade-in zoom-in duration-300">
+                                            <XCircle className="h-3 w-3" />
+                                            <span className="text-[9px] font-black uppercase tracking-tighter">Ocupado</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Status Breakdown (Formatos) - Moved below input and aligned right */}
+                                <div className="mt-1 flex flex-col gap-1 items-end">
+                                    {recepcionStatus.formatos && (
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter mr-1 italic">Formatos:</span>
+                                            <div className={`flex items-center justify-center w-7 h-4 rounded text-[8px] font-black border transition-colors ${recepcionStatus.formatos.recepcion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>REC</div>
+                                            <div className={`flex items-center justify-center w-7 h-4 rounded text-[8px] font-black border transition-colors ${recepcionStatus.formatos.verificacion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>VER</div>
+                                            <div className={`flex items-center justify-center w-7 h-4 rounded text-[8px] font-black border transition-colors ${recepcionStatus.formatos.compresion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>COM</div>
+                                        </div>
+                                    )}
+                                    {recepcionStatus.mensaje && recepcionStatus.estado !== 'buscando' && (
+                                        <div className={`text-right text-[9px] font-black italic uppercase tracking-tighter ${recepcionStatus.estado === 'ocupado' ? 'text-rose-500' : 'text-slate-400/80'}`}>
+                                            {recepcionStatus.mensaje}
+                                        </div>
+                                    )}
+                                </div>
+
+                            </div>
                             <InputField
                                 label="Cotización Nº:"
                                 {...register('numero_cotizacion')}
@@ -907,9 +1043,9 @@ export default function OrdenForm() {
                             {isSubmitting ? 'Guardando...' : (isEditMode ? 'Actualizar Recepción' : 'Crear Recepción de Muestra')}
                         </button>
                     </div>
-                </form>
-            </main>
-        </div>
+                </form >
+            </main >
+        </div >
     );
 }
 

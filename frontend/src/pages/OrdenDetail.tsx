@@ -106,7 +106,7 @@ export default function OrdenDetail() {
                             {isDownloading ? 'Generando...' : 'Exportar Excel'}
                         </button>
                         <button
-                            onClick={() => navigate(`/migration/editar/${orden.id}`)}
+                            onClick={() => navigate(`/migration/recepciones/${orden.id}/editar`)}
                             className="flex items-center gap-2 px-4 py-2 bg-[#003366] text-white rounded-xl text-xs font-bold hover:bg-[#002244] transition-all shadow-md shadow-blue-900/10"
                         >
                             <Pencil className="h-4 w-4" />
