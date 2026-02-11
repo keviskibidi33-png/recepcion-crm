@@ -37,7 +37,7 @@ const sampleSchema = z.object({
     hora_moldeo: z.string().optional(),
     edad: z.union([z.number(), z.string()]).transform((val) => Number(val) || 7),
     fecha_rotura: z.string().optional(),
-    requiere_densidad: z.union([z.boolean(), z.string()]).transform((val) => val === true || val === "true")
+    requiere_densidad: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.boolean(), z.string()]).optional().transform((val) => val === true || val === "true"))
 });
 
 const formSchema = z.object({
