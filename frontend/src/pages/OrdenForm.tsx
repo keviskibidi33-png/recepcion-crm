@@ -27,14 +27,19 @@ import { useFormPersist } from '../hooks/use-form-persist';
 
 // Validation Schema
 // Validation Schema
+// Validation Schema
 const sampleSchema = z.object({
     item_numero: z.number().optional(),
     codigo_muestra_lem: z.string().optional(),
     identificacion_muestra: z.string().min(1, "Identificación Requerida"),
     estructura: z.string().min(1, "Estructura Requerida"),
     fc_kg_cm2: z.union([z.number(), z.string()]).transform((val) => Number(val) || 280),
-    fecha_moldeo: z.string().optional(),
-    hora_moldeo: z.string().optional(),
+    fecha_moldeo: z.string()
+        .regex(/^(?:\d{2}\/\d{2}\/\d{4}|N\/A|NO APLICA|-)$/i, "Formato DD/MM/YYYY o N/A requerido")
+        .optional(),
+    hora_moldeo: z.string()
+        .regex(/^(?:\d{2}:\d{2}|N\/A|NO APLICA|-)$/i, "Formato HH:mm o N/A requerido")
+        .optional(),
     edad: z.union([z.number(), z.string()]).transform((val) => Number(val) || 7),
     fecha_rotura: z.string().optional(),
     requiere_densidad: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.boolean(), z.string()]).optional().transform((val) => val === true || val === "true"))
@@ -145,12 +150,35 @@ export default function OrdenForm() {
     const form = useForm<FormInput>({
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
+            numero_recepcion: '',
+            numero_ot: '',
+            numero_cotizacion: '',
+            cliente: '',
+            ruc: '',
+            domicilio_legal: '',
+            persona_contacto: '',
+            email: '',
+            telefono: '',
+            solicitante: '',
+            domicilio_solicitante: '',
+            proyecto: '',
+            ubicacion: '',
+            fecha_recepcion: getFormattedDate(),
+            fecha_estimada_culminacion: getFormattedDate(),
+            emision_fisica: true,
+            emision_digital: true,
+            entregado_por: '',
+            recibido_por: 'ING. GEORGINA ALARCON',
+            observaciones: '',
             muestras: [{
                 identificacion_muestra: "",
                 estructura: "",
-                fc_kg_cm2: "" as any, // Start empty
-                edad: "" as any,      // Start empty
-                requiere_densidad: "" as any // Start empty/hyphen
+                fc_kg_cm2: "" as any,
+                fecha_moldeo: "",
+                hora_moldeo: "",
+                edad: "" as any,
+                fecha_rotura: "",
+                requiere_densidad: false
             }]
         }
     });
@@ -701,7 +729,7 @@ export default function OrdenForm() {
                                 {...register('numero_cotizacion')}
                                 onBlur={(e) => {
                                     let value = e.target.value.trim().toUpperCase();
-                                    if (value) {
+                                    if (value && !/^(N\/A|NO APLICA|-)$/i.test(value)) {
                                         const fullFormat = /^\d+-COT-\d{2}$/.test(value);
                                         if (!fullFormat) {
                                             const digits = value.match(/\d+/);
@@ -721,7 +749,7 @@ export default function OrdenForm() {
                                 {...register('numero_ot')}
                                 onBlur={(e) => {
                                     let value = e.target.value.trim().toUpperCase();
-                                    if (value) {
+                                    if (value && !/^(N\/A|NO APLICA|-)$/i.test(value)) {
                                         const fullFormat = /^OT-\d+-\d{2}$/.test(value);
                                         if (!fullFormat) {
                                             const digits = value.match(/\d+/);
