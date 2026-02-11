@@ -699,14 +699,42 @@ export default function OrdenForm() {
                             <InputField
                                 label="Cotización Nº:"
                                 {...register('numero_cotizacion')}
+                                onBlur={(e) => {
+                                    let value = e.target.value.trim().toUpperCase();
+                                    if (value) {
+                                        const fullFormat = /^\d+-COT-\d{2}$/.test(value);
+                                        if (!fullFormat) {
+                                            const digits = value.match(/\d+/);
+                                            if (digits) {
+                                                value = `${digits[0]}-COT-26`;
+                                            }
+                                        }
+                                        e.target.value = value;
+                                        setValue('numero_cotizacion', value, { shouldValidate: true });
+                                    }
+                                }}
                                 error={errors.numero_cotizacion?.message}
-                                placeholder="0090"
+                                placeholder="0090-COT-26"
                             />
                             <InputField
                                 label="OT Nº:"
                                 {...register('numero_ot')}
+                                onBlur={(e) => {
+                                    let value = e.target.value.trim().toUpperCase();
+                                    if (value) {
+                                        const fullFormat = /^OT-\d+-\d{2}$/.test(value);
+                                        if (!fullFormat) {
+                                            const digits = value.match(/\d+/);
+                                            if (digits) {
+                                                value = `OT-${digits[0]}-26`;
+                                            }
+                                        }
+                                        e.target.value = value;
+                                        setValue('numero_ot', value, { shouldValidate: true });
+                                    }
+                                }}
                                 error={errors.numero_ot?.message}
-                                placeholder="196-26"
+                                placeholder="OT-196-26"
                             />
                         </div>
                     </div>
