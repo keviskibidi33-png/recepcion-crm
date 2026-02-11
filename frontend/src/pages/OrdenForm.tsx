@@ -73,6 +73,15 @@ const DEFAULT_EDAD = 7;
 // Helpers
 const incrementString = (str: string | undefined) => {
     if (!str) return '';
+    
+    // Pattern: 12345-CO-26 (Detect LEM code structure)
+    const lemMatch = str.match(/^(\d+)(-CO-)(\d+)$/i);
+    if (lemMatch) {
+        const [, base, sep, year] = lemMatch;
+        const newBase = String(Number(base) + 1).padStart(base.length, '0');
+        return `${newBase}${sep}${year}`;
+    }
+
     const match = str.match(/\d+/g);
     if (!match) return str;
     if (/^\d+$/.test(str)) {
@@ -261,20 +270,22 @@ export default function OrdenForm() {
 
     // Handle selecting a client from dropdown
     const handleSelectCliente = (c: any) => {
+        const fallback = (v: any) => (v && v.toString().trim()) ? v : '-';
+
         // Essential fields
-        setValue('cliente', c.nombre, { shouldValidate: true });
-        setValue('ruc', c.ruc || '', { shouldValidate: true });
-        setValue('domicilio_legal', c.direccion || '', { shouldValidate: true });
-        setValue('persona_contacto', c.contacto || '', { shouldValidate: true });
-        setValue('email', c.email || '', { shouldValidate: true });
-        setValue('telefono', c.telefono || '', { shouldValidate: true });
+        setValue('cliente', fallback(c.nombre), { shouldValidate: true });
+        setValue('ruc', fallback(c.ruc), { shouldValidate: true });
+        setValue('domicilio_legal', fallback(c.direccion), { shouldValidate: true });
+        setValue('persona_contacto', fallback(c.contacto), { shouldValidate: true });
+        setValue('email', fallback(c.email), { shouldValidate: true });
+        setValue('telefono', fallback(c.telefono), { shouldValidate: true });
 
         // Fill Solicitante (usually the same as client initially)
-        setValue('solicitante', c.nombre, { shouldValidate: true });
-        setValue('domicilio_solicitante', c.direccion || '', { shouldValidate: true });
+        setValue('solicitante', fallback(c.nombre), { shouldValidate: true });
+        setValue('domicilio_solicitante', fallback(c.direccion), { shouldValidate: true });
 
         // Entregado por: Link to contact person
-        setValue('entregado_por', c.contacto || '', { shouldValidate: true });
+        setValue('entregado_por', fallback(c.contacto), { shouldValidate: true });
 
         setClienteSearch(c.nombre);
         setShowClienteDropdown(false);
@@ -399,10 +410,16 @@ export default function OrdenForm() {
 
         let finalDate = '';
 
-        // Case 1: "512" -> 05/12/YYYY
-        if (digits.length === 3) {
+        // Case 0.5: "22" -> 02/02/YYYY (D/M -> DD/MM/YYYY)
+        if (digits.length === 2) {
             const d = digits.slice(0, 1).padStart(2, '0');
             const m = digits.slice(1).padStart(2, '0');
+            finalDate = `${d}/${m}/${currentYear}`;
+        }
+        // Case 1: "412" -> 04/12/YYYY (D/MM -> DD/MM/YYYY)
+        else if (digits.length === 3) {
+            const d = digits.slice(0, 1).padStart(2, '0');
+            const m = digits.slice(1);
             finalDate = `${d}/${m}/${currentYear}`;
         }
         // Case 1.5: "21226" -> 02/12/2026 (DMMYY -> DD/MM/YYYY)
