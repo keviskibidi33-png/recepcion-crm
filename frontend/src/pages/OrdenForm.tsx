@@ -142,17 +142,43 @@ export default function OrdenForm() {
         }
     );
 
+    const defaultValues: FormInput = {
+        numero_ot: "",
+        numero_recepcion: "",
+        numero_cotizacion: "",
+        cliente: "",
+        domicilio_legal: "",
+        ruc: "",
+        persona_contacto: "",
+        email: "",
+        telefono: "",
+        solicitante: "",
+        domicilio_solicitante: "",
+        proyecto: "",
+        ubicacion: "",
+        fecha_recepcion: "",
+        fecha_estimada_culminacion: "",
+        emision_fisica: false,
+        emision_digital: false,
+        entregado_por: "",
+        recibido_por: "",
+        observaciones: "",
+        muestras: [{
+            identificacion_muestra: "",
+            estructura: "",
+            fc_kg_cm2: "" as any,
+            edad: "" as any,
+            requiere_densidad: "" as any,
+            fecha_moldeo: "",
+            hora_moldeo: "",
+            fecha_rotura: "",
+            codigo_muestra_lem: ""
+        }]
+    };
+
     const form = useForm<FormInput>({
         resolver: zodResolver(formSchema) as any,
-        defaultValues: {
-            muestras: [{
-                identificacion_muestra: "",
-                estructura: "",
-                fc_kg_cm2: "" as any, // Start empty
-                edad: "" as any,      // Start empty
-                requiere_densidad: "" as any // Start empty/hyphen
-            }]
-        }
+        defaultValues
     });
 
     const { register, control, handleSubmit, setValue, watch, reset, formState: { errors } } = form;
