@@ -49,7 +49,8 @@ export function useFormPersist<T extends FieldValues>(
     const clearSavedData = useCallback(() => {
         localStorage.removeItem(formKey);
         setHasSavedData(false);
-    }, [formKey]);
+        reset(); // Ensure the form is also cleared from state
+    }, [formKey, reset]);
 
     return {
         clearSavedData,

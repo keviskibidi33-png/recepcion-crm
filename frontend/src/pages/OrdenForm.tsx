@@ -517,7 +517,13 @@ export default function OrdenForm() {
                                         <span className="text-[10px] text-amber-700 mr-2 font-medium tracking-normal normal-case">Borrador guardado</span>
                                         <button
                                             type="button"
-                                            onClick={clearSavedData}
+                                            onClick={() => {
+                                                clearSavedData();
+                                                setRecepcionStatus({ estado: 'idle' });
+                                                setClienteSearch('');
+                                                setTemplateSearch('');
+                                                toast.success('Borrador eliminado y formulario reiniciado');
+                                            }}
                                             className="p-1 text-amber-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                             title="Descartar borrador y limpiar formulario"
                                         >
