@@ -981,26 +981,24 @@ export default function OrdenForm() {
 
                     {/* SECTION 2: INFORME */}
                     <Section title="DATOS QUE IRÁ EN EL INFORME DE LABORATORIO">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <InputField
-                                label="Solicitante:"
-                                {...register('solicitante')}
-                                error={errors.solicitante?.message}
-                                placeholder="CONSTRUCTORA PROYECTOS S.A.C." // Realistic Applicant
-                            />
-                            <InputField
-                                label="Proyecto:"
-                                {...register('proyecto')}
-                                error={errors.proyecto?.message}
-                                placeholder="EDIFICIO RESIDENCIAL MIRADOR" // Realistic Project
-                            />
-                        </div>
+                        <InputField
+                            label="Solicitante:"
+                            {...register('solicitante')}
+                            error={errors.solicitante?.message}
+                            placeholder="CONSTRUCTORA PROYECTOS S.A.C." // Realistic Applicant
+                        />
                         <TextareaField
                             label="Domicilio Legal Solicitante:"
                             {...register('domicilio_solicitante')}
                             error={errors.domicilio_solicitante?.message}
                             placeholder="AV. JAVIER PRADO ESTE 1234, SAN ISIDRO, LIMA" // Realistic Address
                             rows={2}
+                        />
+                        <InputField
+                            label="Proyecto:"
+                            {...register('proyecto')}
+                            error={errors.proyecto?.message}
+                            placeholder="EDIFICIO RESIDENCIAL MIRADOR" // Realistic Project
                         />
                         <TextareaField
                             label="Ubicación:"
