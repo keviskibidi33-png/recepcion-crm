@@ -139,9 +139,9 @@ export default function OrdenForm() {
             muestras: [{
                 identificacion_muestra: "",
                 estructura: "",
-                fc_kg_cm2: "" as any, // Empty string for placeholder
-                edad: "" as any,      // Empty string for placeholder
-                requiere_densidad: false
+                fc_kg_cm2: "" as any, // Start empty
+                edad: "" as any,      // Start empty
+                requiere_densidad: "" as any // Start empty/hyphen
             }]
         }
     });
@@ -755,7 +755,7 @@ export default function OrdenForm() {
                                                         type="text"
                                                         {...register(`muestras.${index}.fc_kg_cm2`)}
                                                         className={`w-16 mx-auto block px-2 py-1.5 text-xs font-black text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.fc_kg_cm2 ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="280"
+                                                        placeholder="-"
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3">
@@ -781,7 +781,7 @@ export default function OrdenForm() {
                                                         type="text"
                                                         {...register(`muestras.${index}.edad`)}
                                                         className={`w-12 mx-auto block px-2 py-1.5 text-xs font-bold text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.edad ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="7"
+                                                        placeholder="-"
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3">
@@ -800,6 +800,7 @@ export default function OrdenForm() {
                                                         {...register(`muestras.${index}.requiere_densidad`)}
                                                         className="w-16 mx-auto block px-2 py-1.5 text-[10px] font-black uppercase border border-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm cursor-pointer appearance-none text-center"
                                                     >
+                                                        <option value="">-</option>
                                                         <option value="false">NO</option>
                                                         <option value="true">SI</option>
                                                     </select>
@@ -836,11 +837,11 @@ export default function OrdenForm() {
                                     item_numero: fields.length + 1,
                                     identificacion_muestra: '',
                                     estructura: '',
-                                    fc_kg_cm2: undefined as any,
-                                    edad: undefined as any,
+                                    fc_kg_cm2: "" as any,
+                                    edad: "" as any,
                                     fecha_moldeo: '',
                                     fecha_rotura: '',
-                                    requiere_densidad: false
+                                    requiere_densidad: "" as any
                                 })}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-[#0070F3] text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
                             >
