@@ -64,7 +64,8 @@ const formSchema = z.object({
     muestras: z.array(sampleSchema).min(1, "Mínimo una muestra")
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormOutput = z.output<typeof formSchema>;
+type FormInput = z.input<typeof formSchema>;
 
 const DEFAULT_FC = 280;
 const DEFAULT_EDAD = 7;
@@ -132,14 +133,14 @@ export default function OrdenForm() {
         }
     );
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
+    const form = useForm<FormInput>({
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             muestras: [{
                 identificacion_muestra: "",
                 estructura: "",
-                fc_kg_cm2: undefined as any, // Use placeholder
-                edad: undefined as any,      // Use placeholder
+                fc_kg_cm2: "" as any, // Empty string for placeholder
+                edad: "" as any,      // Empty string for placeholder
                 requiere_densidad: false
             }]
         }
@@ -345,7 +346,7 @@ export default function OrdenForm() {
         }
     }, [existingOrden, reset]);
 
-    const onSubmit = async (data: FormValues) => {
+    const onSubmit = async (data: FormOutput) => {
         setIsSubmitting(true);
         try {
             // FORCE item_numero assignment here to prevent validation issues
@@ -526,7 +527,7 @@ export default function OrdenForm() {
             </div>
 
             <main className="max-w-7xl mx-auto px-6 py-12 space-y-12">
-                <form onSubmit={handleSubmit(onSubmit, (errors) => {
+                <form onSubmit={handleSubmit(onSubmit as any, (errors) => {
                     console.error("DEBUG - Validation Errors:", errors);
 
                     // Recursive helper to find the first actual error message
