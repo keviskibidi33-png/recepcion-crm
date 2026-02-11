@@ -138,8 +138,8 @@ export default function OrdenForm() {
             muestras: [{
                 identificacion_muestra: "",
                 estructura: "",
-                fc_kg_cm2: DEFAULT_FC,
-                edad: DEFAULT_EDAD,
+                fc_kg_cm2: undefined as any, // Use placeholder
+                edad: undefined as any,      // Use placeholder
                 requiere_densidad: false
             }]
         }
@@ -403,6 +403,13 @@ export default function OrdenForm() {
             const d = digits.slice(0, 1).padStart(2, '0');
             const m = digits.slice(1).padStart(2, '0');
             finalDate = `${d}/${m}/${currentYear}`;
+        }
+        // Case 1.5: "21226" -> 02/12/2026 (DMMYY -> DD/MM/YYYY)
+        else if (digits.length === 5) {
+            const d = digits.slice(0, 1).padStart(2, '0');
+            const m = digits.slice(1, 3);
+            const y = digits.slice(3);
+            finalDate = `${d}/${m}/20${y}`;
         }
         // Case 2: "0512" or "5/12" (digits=512 is ambiguous, assuming 4 if 0512) -> 05/12/YYYY
         else if (digits.length === 4) {
@@ -773,7 +780,7 @@ export default function OrdenForm() {
                                                         type="text"
                                                         {...register(`muestras.${index}.edad`)}
                                                         className={`w-12 mx-auto block px-2 py-1.5 text-xs font-bold text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.edad ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="28"
+                                                        placeholder="7"
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3">
@@ -828,8 +835,8 @@ export default function OrdenForm() {
                                     item_numero: fields.length + 1,
                                     identificacion_muestra: '',
                                     estructura: '',
-                                    fc_kg_cm2: DEFAULT_FC,
-                                    edad: DEFAULT_EDAD,
+                                    fc_kg_cm2: undefined as any,
+                                    edad: undefined as any,
                                     fecha_moldeo: '',
                                     fecha_rotura: '',
                                     requiere_densidad: false
@@ -893,12 +900,17 @@ export default function OrdenForm() {
                             rows={2}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <InputField
-                                label="Persona Contacto:"
-                                {...register('persona_contacto')}
-                                error={errors.persona_contacto?.message}
-                                placeholder="ING. JUAN PEREZ" // Realistic Contact
-                            />
+                                <InputField
+                                    label="Persona Contacto:"
+                                    {...register('persona_contacto')}
+                                    onChange={(e) => {
+                                        register('persona_contacto').onChange(e);
+                                        // Sync to "Entregado por"
+                                        setValue('entregado_por', e.target.value.toUpperCase(), { shouldValidate: true });
+                                    }}
+                                    error={errors.persona_contacto?.message}
+                                    placeholder="ING. JUAN PEREZ" // Realistic Contact
+                                />
                             <InputField
                                 label="E-mail:"
                                 {...register('email')}
