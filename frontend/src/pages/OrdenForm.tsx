@@ -432,6 +432,11 @@ export default function OrdenForm() {
         let val = e.target.value.trim();
         if (!val) return;
 
+        // Ignore N/A, NO APLICA, or "-" to prevent unwanted formatting
+        if (/^(N\/A|NO APLICA|-)$/i.test(val)) {
+            return;
+        }
+
         // Remove non-digits for analysis, but keep slashes if user typed them partially
         const digits = val.replace(/\D/g, '');
         const currentYear = new Date().getFullYear();
