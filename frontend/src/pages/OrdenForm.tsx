@@ -763,22 +763,74 @@ export default function OrdenForm() {
                             <InputField
                                 label="Cotización Nº:"
                                 {...register('numero_cotizacion')}
-                                onBlur={(e) => {
-                                    let value = e.target.value.trim().toUpperCase();
-                                    if (value) {
-                                        const fullFormat = /^\d+-COT-\d{2}$/.test(value);
-                                        if (!fullFormat) {
-                                            const digits = value.match(/\d+/);
-                                            if (digits) {
-                                                value = `${digits[0]}-COT-26`;
-                                            }
-                                        }
-                                        e.target.value = value;
-                                        setValue('numero_cotizacion', value, { shouldValidate: true });
-                                    }
-                                }}
                                 error={errors.numero_cotizacion?.message}
                                 placeholder="0090-COT-26"
+                                onBlur={async (e) => {
+                                    let value = e.target.value.trim().toUpperCase();
+                                    if (!value) return;
+
+                                    // Normailze format
+                                    const fullFormat = /^\d+-COT-\d{2}$/.test(value);
+                                    if (!fullFormat) {
+                                        const digits = value.match(/\d+/);
+                                        if (digits) {
+                                            value = `${digits[0]}-COT-26`;
+                                        }
+                                    }
+                                    // Also support simplified input "123-26" -> internally handled as token
+                                    
+                                    e.target.value = value;
+                                    setValue('numero_cotizacion', value, { shouldValidate: true });
+
+                                    // Extract simple token: "090-COT-26" -> "090-26"
+                                    const match = value.match(/^(\d+)-COT-(\d+)$/);
+                                    if (match) {
+                                        const token = `${match[1]}-${match[2]}`;
+                                        try {
+                                            toast.loading('Buscando cotización...');
+                                            const res = await recepcionApi.obtenerCotizacionPorToken(token);
+                                            toast.dismiss();
+                                            
+                                            if (res.success && res.data) {
+                                                const q = res.data;
+                                                toast.success(`Cotización encontrada: ${q.cliente}`);
+                                                
+                                                // Auto-fill Client Data
+                                                setValue('cliente', q.cliente || '', { shouldValidate: true });
+                                                setValue('ruc', q.ruc || '', { shouldValidate: true });
+                                                setValue('persona_contacto', q.contacto || '', { shouldValidate: true });
+                                                setValue('email', q.email || '', { shouldValidate: true });
+                                                setValue('telefono', q.telefono || '', { shouldValidate: true });
+                                                setValue('proyecto', q.proyecto || '', { shouldValidate: true });
+                                                setValue('ubicacion', q.ubicacion || '', { shouldValidate: true });
+
+                                                // Auto-fill Samples (Items)
+                                                if (q.items_json && Array.isArray(q.items_json)) {
+                                                    const newMuestras = q.items_json.map((item: any, idx: number) => ({
+                                                        item_numero: idx + 1,
+                                                        identificacion_muestra: item.descripcion || `Muestra ${idx + 1}`,
+                                                        estructura: '', // Manual fill usually
+                                                        fc_kg_cm2: 280, // Default
+                                                        edad: 7,      // Default
+                                                        requiere_densidad: false,
+                                                        fecha_moldeo: '',
+                                                        hora_moldeo: '',
+                                                        fecha_rotura: '',
+                                                        codigo_muestra_lem: '' // Will be auto-generated
+                                                    }));
+                                                    
+                                                    // Replace current fields
+                                                    setValue('muestras', newMuestras);
+                                                    toast.success(`${newMuestras.length} items importados de la cotización`);
+                                                }
+                                            }
+                                        } catch (err) {
+                                            toast.dismiss();
+                                            // Silent fail or low profile warning, as quote might not exist
+                                            console.log("Quote fetch error", err);
+                                        }
+                                    }
+                                }}
                             />
                             <InputField
                                 label="OT Nº:"

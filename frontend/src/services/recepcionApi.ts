@@ -65,5 +65,15 @@ export const recepcionApi = {
     validarEstado: async (numeroRecepcion: string): Promise<any> => {
         const response = await api.get(`/api/tracing/validate/${numeroRecepcion}`);
         return response.data;
+    },
+
+    obtenerCotizacionPorToken: async (token: string): Promise<any> => {
+        try {
+            const response = await api.get(`/api/cotizacion/by-token/${token}`);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching quote by token:", error);
+            throw error;
+        }
     }
 };
