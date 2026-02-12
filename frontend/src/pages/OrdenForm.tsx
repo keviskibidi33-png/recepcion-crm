@@ -543,12 +543,18 @@ export default function OrdenForm() {
                                         <span className="text-[10px] text-amber-700 mr-2 font-medium tracking-normal normal-case">Borrador guardado</span>
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                clearSavedData();
-                                                setRecepcionStatus({ estado: 'idle' });
-                                                setClienteSearch('');
-                                                setTemplateSearch('');
-                                                toast.success('Borrador eliminado y formulario reiniciado');
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                if (window.confirm("¿Estás seguro de eliminar el borrador?")) {
+                                                    clearSavedData();
+                                                    setRecepcionStatus({ estado: 'idle' });
+                                                    setClienteSearch('');
+                                                    setTemplateSearch('');
+                                                    // Explicitly reset to default values to ensure clean state
+                                                    reset(defaultValues);
+                                                    toast.success('Borrador eliminado y formulario reiniciado');
+                                                }
                                             }}
                                             className="p-1 text-amber-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                             title="Descartar borrador y limpiar formulario"
@@ -894,7 +900,11 @@ export default function OrdenForm() {
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            onClick={() => remove(index)}
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                remove(index);
+                                                            }}
                                                             className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
