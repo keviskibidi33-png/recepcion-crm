@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { recepcionApi } from '../services/recepcionApi';
 import { useFormPersist } from '../hooks/use-form-persist';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 // Validation Schema
 // Validation Schema
@@ -141,6 +142,19 @@ export default function OrdenForm() {
             }
         }
     );
+
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    const handleConfirmDelete = () => {
+        clearSavedData();
+        setRecepcionStatus({ estado: 'idle' });
+        setClienteSearch('');
+        setTemplateSearch('');
+        // Explicitly reset to default values to ensure clean state
+        reset(defaultValues);
+        toast.success('Borrador eliminado y formulario reiniciado');
+        setIsDeleteModalOpen(false);
+    };
 
     const defaultValues: FormInput = {
         numero_ot: "",
@@ -546,15 +560,7 @@ export default function OrdenForm() {
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
-                                                if (window.confirm("¿Estás seguro de eliminar el borrador?")) {
-                                                    clearSavedData();
-                                                    setRecepcionStatus({ estado: 'idle' });
-                                                    setClienteSearch('');
-                                                    setTemplateSearch('');
-                                                    // Explicitly reset to default values to ensure clean state
-                                                    reset(defaultValues);
-                                                    toast.success('Borrador eliminado y formulario reiniciado');
-                                                }
+                                                setIsDeleteModalOpen(true);
                                             }}
                                             className="p-1 text-amber-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                             title="Descartar borrador y limpiar formulario"
@@ -751,6 +757,7 @@ export default function OrdenForm() {
                             <InputField
                                 label="OT Nº:"
                                 {...register('numero_ot')}
+                                autoComplete="off"
                                 onBlur={(e) => {
                                     let value = e.target.value.trim().toUpperCase();
                                     if (value) {
@@ -1144,6 +1151,16 @@ export default function OrdenForm() {
                     </div>
                 </form >
             </main >
+
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="recepcion.geofal.com.pe dice"
+                message="¿Estás seguro de eliminar el borrador?"
+                confirmText="Aceptar"
+                cancelText="Cancelar"
+            />
         </div >
     );
 }

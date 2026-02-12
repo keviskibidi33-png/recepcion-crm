@@ -1,5 +1,5 @@
-import { useEffect, useCallback, useState, useRef } from 'react';
-import { UseFormReturn, Path, FieldValues, DefaultValues } from 'react-hook-form';
+import { useEffect, useCallback, useState } from 'react';
+import { UseFormReturn, FieldValues, DefaultValues } from 'react-hook-form';
 
 /**
  * Hook to persist form data to localStorage
@@ -12,10 +12,9 @@ export function useFormPersist<T extends FieldValues>(
     formMethods: UseFormReturn<T>,
     enabled: boolean = true
 ) {
-    const { watch, setValue, reset } = formMethods;
+    const { watch, reset } = formMethods;
     const values = watch();
     const [hasSavedData, setHasSavedData] = useState(false);
-    const isClearing = useRef(false);
 
     // Initial load - Only run once on mount or when key/enabled changes
     useEffect(() => {
@@ -39,12 +38,6 @@ export function useFormPersist<T extends FieldValues>(
     useEffect(() => {
         if (!enabled) return;
 
-        // Skip saving if we just cleared the data
-        if (isClearing.current) {
-            isClearing.current = false;
-            return;
-        }
-
         const timeoutId = setTimeout(() => {
             localStorage.setItem(formKey, JSON.stringify(values));
             setHasSavedData(true);
@@ -54,11 +47,9 @@ export function useFormPersist<T extends FieldValues>(
     }, [values, formKey, enabled]);
 
     const clearSavedData = useCallback(() => {
-        isClearing.current = true;
         localStorage.removeItem(formKey);
         setHasSavedData(false);
-        reset(); // Ensure the form is also cleared from state
-    }, [formKey, reset]);
+    }, [formKey]);
 
     return {
         clearSavedData,
