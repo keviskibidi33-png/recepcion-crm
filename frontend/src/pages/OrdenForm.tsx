@@ -444,6 +444,32 @@ export default function OrdenForm() {
         let val = e.target.value.trim();
         if (!val) return;
 
+        // NEW LOGIC: Handle explicit slashes first (e.g. "1/1/2026" or "11/2/26")
+        if (val.includes('/')) {
+            const parts = val.split('/');
+            // We expect at least day/month
+            if (parts.length >= 2) {
+                const d = parts[0].trim().padStart(2, '0');
+                const m = parts[1].trim().padStart(2, '0');
+                let y = (parts[2] || '').trim();
+
+                const currentYear = new Date().getFullYear().toString();
+
+                if (!y) {
+                    y = currentYear;
+                } else if (y.length === 2) {
+                    y = '20' + y;
+                }
+
+                // Basic validation before setting
+                if (d.length === 2 && m.length === 2 && y.length === 4) {
+                    const finalDate = `${d}/${m}/${y}`;
+                    setValue(name, finalDate, { shouldValidate: true });
+                    return; // Exit if successfully handled
+                }
+            }
+        }
+
         // Remove non-digits for analysis, but keep slashes if user typed them partially
         const digits = val.replace(/\D/g, '');
         const currentYear = new Date().getFullYear();
