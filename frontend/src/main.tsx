@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast'
 import RecepcionModule from './pages/RecepcionModule'
 import OrdenForm from './pages/OrdenForm'
 import OrdenDetail from './pages/OrdenDetail'
+import { SessionGuard } from './components/SessionGuard'
 import './index.css'
 
 const queryClient = new QueryClient()
@@ -28,6 +29,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <TokenHandler />
+                <SessionGuard />
                 <Routes>
                     <Route path="/" element={<Navigate to="/migration" replace />} />
                     <Route path="/migration" element={<RecepcionModule />} />

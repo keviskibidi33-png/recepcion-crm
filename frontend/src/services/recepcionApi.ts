@@ -23,8 +23,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401 || error.response?.status === 403) {
-            console.error('[Auth] Unauthorized request - token may be expired');
+        if (error.response?.status === 401) {
+            console.error('[Auth] Session expired — showing modal');
+            window.dispatchEvent(new CustomEvent('session-expired'));
         }
         return Promise.reject(error);
     }
