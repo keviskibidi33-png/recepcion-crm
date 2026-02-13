@@ -532,13 +532,17 @@ export default function OrdenForm() {
             const data = await recepcionApi.validarEstado(numero);
 
             if (data.exists) {
+                // Backend sends lowercase statuses: 'completado', 'en_proceso', 'pendiente'
+                const recStatus = data.recepcion?.status?.toLowerCase();
+                const verStatus = data.verificacion?.status?.toLowerCase();
+                const comStatus = data.compresion?.status?.toLowerCase();
                 setRecepcionStatus({
                     estado: 'ocupado',
                     mensaje: `⚠️ Recepción ya registrada hace poco (Cliente: ${data.cliente || 'Desconocido'})`,
                     formatos: {
-                        recepcion: data.recepcion?.status === 'COMPLETADO' || data.recepcion?.status === 'PENDIENTE',
-                        verificacion: data.verificacion?.status === 'COMPLETADO' || data.verificacion?.status === 'completado',
-                        compresion: data.compresion?.status === 'COMPLETADO' || data.compresion?.status === 'en_proceso' || data.compresion?.status === 'completado'
+                        recepcion: recStatus === 'completado' || recStatus === 'en_proceso',
+                        verificacion: verStatus === 'completado',
+                        compresion: comStatus === 'completado' || comStatus === 'en_proceso'
                     }
                 });
             } else {
