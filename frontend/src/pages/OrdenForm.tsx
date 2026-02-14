@@ -975,16 +975,20 @@ export default function OrdenForm() {
                                                 <td className="px-1 py-3 w-40 align-top">
                                                     <textarea
                                                         {...register(`muestras.${index}.identificacion_muestra`)}
-                                                        rows={Math.max(1, (watch(`muestras.${index}.identificacion_muestra`) || '').split('\n').length)}
-                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all resize-none leading-5 ${sampleErrors?.identificacion_muestra ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
+                                                        rows={1}
+                                                        onInput={(e) => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }}
+                                                        ref={(el) => { register(`muestras.${index}.identificacion_muestra`).ref(el); if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all resize-none leading-5 overflow-hidden ${sampleErrors?.identificacion_muestra ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
                                                         placeholder="BD C62 (2X1)"
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3 w-48 align-top">
                                                     <textarea
                                                         {...register(`muestras.${index}.estructura`)}
-                                                        rows={Math.max(1, (watch(`muestras.${index}.estructura`) || '').split('\n').length)}
-                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all resize-none leading-5 ${sampleErrors?.estructura ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
+                                                        rows={1}
+                                                        onInput={(e) => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }}
+                                                        ref={(el) => { register(`muestras.${index}.estructura`).ref(el); if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all resize-none leading-5 overflow-hidden ${sampleErrors?.estructura ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
                                                         placeholder="BANCODUCTO"
                                                     />
                                                 </td>
