@@ -113,11 +113,13 @@ const formSchema = z.object({
         }
     }
 
-    // If email IS provided, validate format
+    // If email IS provided, validate each line as a separate email
     if (data.email && data.email.trim().length > 0) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(data.email.trim())) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Email inválido", path: ['email'] });
+        const lines = data.email.split(/[\n\r]+/).map(l => l.trim()).filter(l => l.length > 0);
+        const invalid = lines.filter(l => !emailRegex.test(l));
+        if (invalid.length > 0) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Email inválido: ${invalid[0]}`, path: ['email'] });
         }
     }
 
@@ -1158,12 +1160,18 @@ export default function OrdenForm() {
                                     error={errors.persona_contacto?.message}
                                     placeholder="ING. JUAN PEREZ"
                                 />
-                                <InputField
-                                    label="E-mail:"
-                                    {...register('email')}
-                                    error={errors.email?.message}
-                                    placeholder="J.PEREZ@CONSTRUCTORA.COM"
-                                />
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
+                                        E-mail: <span className="text-slate-400 normal-case font-bold">(uno por línea)</span>
+                                    </label>
+                                    <textarea
+                                        {...register('email')}
+                                        rows={2}
+                                        className={`w-full px-4 py-3 bg-white border ${errors.email ? 'border-red-500' : 'border-slate-200'} rounded-xl text-sm font-bold uppercase placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none shadow-sm text-slate-900 leading-6`}
+                                        placeholder={"correo1@empresa.com\ncorreo2@empresa.com"}
+                                    />
+                                    {errors.email?.message && <span className="text-[9px] font-black text-red-500 uppercase ml-1">{errors.email.message}</span>}
+                                </div>
                                 <InputField
                                     label="Teléfono:"
                                     {...register('telefono')}
