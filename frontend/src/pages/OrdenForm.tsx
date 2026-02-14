@@ -185,6 +185,7 @@ export default function OrdenForm() {
     const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
     const isEditMode = !!id;
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
     // Helper to handle closing/return
     const handleClose = () => {
@@ -475,9 +476,8 @@ export default function OrdenForm() {
 
             if (isEditMode) {
                 await recepcionApi.actualizar(Number(id), formattedData as any);
-                toast.success('¡Recepción actualizada!');
                 queryClient.invalidateQueries('recepciones-migration');
-                handleClose();
+                setIsSuccessModalOpen(true);
             } else {
                 const newRecepcion = await recepcionApi.crear(formattedData as any);
                 toast.success('¡Recepción creada!');
@@ -1069,17 +1069,19 @@ export default function OrdenForm() {
                                                         >
                                                             <Copy className="h-4 w-4" />
                                                         </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                remove(index);
-                                                            }}
-                                                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
+                                                        {!isEditMode && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    remove(index);
+                                                                }}
+                                                                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1322,7 +1324,7 @@ export default function OrdenForm() {
                             className="flex items-center gap-2 px-10 py-3 bg-[#0070F3] text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50"
                         >
                             <Save className="h-4 w-4" />
-                            {isSubmitting ? 'Guardando...' : (isEditMode ? 'Actualizar Recepción' : 'Crear Recepción de Muestra')}
+                            {isSubmitting ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Crear Recepción de Muestra')}
                         </button>
                     </div>
                 </form >
@@ -1337,6 +1339,32 @@ export default function OrdenForm() {
                 confirmText="Aceptar"
                 cancelText="Cancelar"
             />
+
+            {/* Success Modal after editing */}
+            {isSuccessModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 transform transition-all scale-100">
+                        <div className="p-8 flex flex-col items-center text-center gap-4">
+                            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                                <CheckCircle2 className="h-8 w-8 text-green-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900">¡Cambios guardados!</h3>
+                            <p className="text-sm text-slate-500">La recepción se actualizó correctamente.</p>
+                        </div>
+                        <div className="px-6 py-4 bg-slate-50 flex justify-center">
+                            <button
+                                onClick={() => {
+                                    setIsSuccessModalOpen(false);
+                                    handleClose();
+                                }}
+                                className="px-8 py-2.5 bg-[#0070F3] text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
+                            >
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
