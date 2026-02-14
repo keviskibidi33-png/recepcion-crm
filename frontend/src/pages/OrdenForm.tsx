@@ -27,16 +27,16 @@ import { useFormPersist } from '../hooks/use-form-persist';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 
 // Validation Schema
-// Helper: check if a DD/MM/YYYY date is within N days from today
+// Helper: check if a DD/MM/YYYY date is within N days from today (past or future)
 const isDateWithinDays = (dateStr: string, days: number): boolean => {
     if (!dateStr || !/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return false;
     const [d, m, y] = dateStr.split('/').map(Number);
     const target = new Date(y, m - 1, d);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const diffMs = target.getTime() - today.getTime();
+    const diffMs = Math.abs(target.getTime() - today.getTime());
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    return diffDays >= 0 && diffDays <= days;
+    return diffDays <= days;
 };
 
 const sampleSchema = z.object({
@@ -57,12 +57,12 @@ const sampleSchema = z.object({
     fecha_rotura: z.string().min(1, "Fecha de rotura Requerida").regex(/^\d{2}\/\d{2}\/\d{4}$/, "Formato DD/MM/YYYY"),
     requiere_densidad: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.boolean(), z.string()]).optional().transform((val) => val === true || val === "true"))
 }).superRefine((data, ctx) => {
-    // hora_moldeo required only if fecha_moldeo is within 3 days of today
-    if (data.fecha_moldeo && isDateWithinDays(data.fecha_moldeo, 3)) {
+    // hora_moldeo required only if fecha_moldeo is MORE than 3 days from today
+    if (data.fecha_moldeo && !isDateWithinDays(data.fecha_moldeo, 3)) {
         if (!data.hora_moldeo || data.hora_moldeo.trim() === '') {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: "Hora requerida (moldeo dentro de 3 días)",
+                message: "Hora requerida (moldeo mayor a 3 días)",
                 path: ['hora_moldeo'],
             });
         }
