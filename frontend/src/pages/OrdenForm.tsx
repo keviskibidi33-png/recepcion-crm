@@ -927,7 +927,19 @@ export default function OrdenForm() {
                     {/* SAMPLES TABLE SECTION */}
                     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                            <table className="w-full text-left border-collapse" onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const target = e.target as HTMLElement;
+                                    const table = target.closest('table');
+                                    if (!table) return;
+                                    const focusable = Array.from(table.querySelectorAll<HTMLElement>('input:not([type=hidden]), textarea, select'));
+                                    const idx = focusable.indexOf(target);
+                                    if (idx >= 0 && idx < focusable.length - 1) {
+                                        focusable[idx + 1].focus();
+                                    }
+                                }
+                            }}>
                                 <thead>
                                     <tr className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-900 border-b border-slate-100">
                                         <th className="px-4 py-4 w-12 text-center">N°</th>
