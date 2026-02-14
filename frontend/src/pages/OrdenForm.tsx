@@ -113,10 +113,10 @@ const formSchema = z.object({
         }
     }
 
-    // If email IS provided, validate each line as a separate email
+    // If email IS provided, validate each entry as a separate email (split by newline, space, comma, semicolon)
     if (data.email && data.email.trim().length > 0) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const lines = data.email.split(/[\n\r]+/).map(l => l.trim()).filter(l => l.length > 0);
+        const lines = data.email.split(/[\n\r\s,;]+/).map(l => l.trim()).filter(l => l.length > 0);
         const invalid = lines.filter(l => !emailRegex.test(l));
         if (invalid.length > 0) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Email inválido: ${invalid[0]}`, path: ['email'] });
