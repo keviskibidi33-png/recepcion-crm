@@ -930,8 +930,8 @@ export default function OrdenForm() {
                                     <tr className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-900 border-b border-slate-100">
                                         <th className="px-4 py-4 w-12 text-center">N°</th>
                                         <th className="px-2 py-4 w-28">Código LEM</th>
-                                        <th className="px-2 py-4 w-28">Identificación</th>
-                                        <th className="px-2 py-4">Estructura</th>
+                                        <th className="px-2 py-4 w-40">Código</th>
+                                        <th className="px-2 py-4 w-48">Estructura</th>
                                         <th className="px-2 py-4 w-16 text-center">F'c</th>
                                         <th className="px-2 py-4 w-24 text-center">Fecha moldeo</th>
                                         <th className="px-2 py-4 w-12 text-center">Hora</th>
@@ -970,18 +970,20 @@ export default function OrdenForm() {
                                                         placeholder="1483"
                                                     />
                                                 </td>
-                                                <td className="px-1 py-3 w-28">
-                                                    <input
+                                                <td className="px-1 py-3 w-40 align-top">
+                                                    <textarea
                                                         {...register(`muestras.${index}.identificacion_muestra`)}
-                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.identificacion_muestra ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="E-01"
+                                                        rows={Math.max(1, (watch(`muestras.${index}.identificacion_muestra`) || '').split('\n').length)}
+                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all resize-none leading-5 ${sampleErrors?.identificacion_muestra ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
+                                                        placeholder="BD C62 (2X1)"
                                                     />
                                                 </td>
-                                                <td className="px-1 py-3">
-                                                    <input
+                                                <td className="px-1 py-3 w-48 align-top">
+                                                    <textarea
                                                         {...register(`muestras.${index}.estructura`)}
-                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.estructura ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="ZAPATA Z-1" // Realistic structure
+                                                        rows={Math.max(1, (watch(`muestras.${index}.estructura`) || '').split('\n').length)}
+                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all resize-none leading-5 ${sampleErrors?.estructura ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
+                                                        placeholder="BANCODUCTO"
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3">
