@@ -151,8 +151,9 @@ export default function OrdenDetail() {
                                         <div className="space-y-3">
                                             <p className="text-sm font-black text-slate-900 uppercase">{orden.persona_contacto}</p>
                                             <div className="flex flex-col gap-2">
-                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase">
-                                                    <Mail className="h-3 w-3 text-slate-400" /> {orden.email}
+                                                <div className="flex items-start gap-2 text-xs font-bold text-slate-700 uppercase">
+                                                    <Mail className="h-3 w-3 text-slate-400 mt-0.5 shrink-0" />
+                                                    <span className="whitespace-pre-wrap break-all">{(orden.email || '').split(/[\s,;]+/).filter(Boolean).join('\n')}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase">
                                                     <Phone className="h-3 w-3 text-slate-400" /> {orden.telefono}
@@ -172,28 +173,37 @@ export default function OrdenDetail() {
                                     <h3 className="font-black text-slate-900 uppercase tracking-tight">Muestras Registradas ({orden.muestras?.length})</h3>
                                 </div>
                             </div>
-                            <div className="overflow-x-auto max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                            <div className="overflow-x-auto max-h-[700px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                 <table className="w-full text-left">
                                     <thead>
-                                        <tr className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-600 border-b border-slate-100">
-                                            <th className="px-8 py-4 w-16 text-center">Itm</th>
-                                            <th className="px-4 py-4">Identificación</th>
+                                        <tr className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-600 border-b border-slate-100 sticky top-0 bg-white z-10">
+                                            <th className="px-4 py-4 w-12 text-center">N°</th>
+                                            <th className="px-4 py-4">Código LEM</th>
+                                            <th className="px-4 py-4">Código</th>
                                             <th className="px-4 py-4">Estructura</th>
                                             <th className="px-4 py-4 text-center">F'c</th>
-                                            <th className="px-8 py-4 text-center">Moldeo</th>
+                                            <th className="px-4 py-4 text-center">Fecha Moldeo</th>
+                                            <th className="px-4 py-4 text-center">Hora</th>
+                                            <th className="px-4 py-4 text-center">Edad</th>
+                                            <th className="px-4 py-4 text-center">Fecha Rotura</th>
+                                            <th className="px-4 py-4 text-center">Densidad</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
                                         {orden.muestras?.map((muestra, idx) => (
                                             <tr key={muestra.id} className="hover:bg-blue-50/20 transition-colors group">
-                                                <td className="px-8 py-4 text-xs font-black text-slate-500 text-center">{idx + 1}</td>
-                                                <td className="px-4 py-4 text-sm font-black text-slate-900 uppercase">{muestra.identificacion_muestra}</td>
-                                                <td className="px-4 py-4 text-sm text-slate-700 font-bold uppercase">{muestra.estructura}</td>
-                                                <td className="px-4 py-4 text-sm text-center">
-                                                    <span className="font-black text-slate-900">{muestra.fc_kg_cm2}</span>
-                                                    <span className="text-[10px] font-black text-slate-600 ml-1">KG</span>
+                                                <td className="px-4 py-3 text-xs font-black text-slate-500 text-center">{idx + 1}</td>
+                                                <td className="px-4 py-3 text-xs font-black text-blue-600 uppercase">{muestra.codigo_muestra_lem || '-'}</td>
+                                                <td className="px-4 py-3 text-xs font-black text-slate-900 uppercase whitespace-pre-wrap">{muestra.identificacion_muestra}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-700 font-bold uppercase whitespace-pre-wrap">{muestra.estructura}</td>
+                                                <td className="px-4 py-3 text-xs text-center">
+                                                    <span className="font-black text-amber-600">{muestra.fc_kg_cm2}</span>
                                                 </td>
-                                                <td className="px-8 py-4 text-sm text-center font-bold text-slate-700">{muestra.fecha_moldeo}</td>
+                                                <td className="px-4 py-3 text-xs text-center font-bold text-slate-700">{muestra.fecha_moldeo || '-'}</td>
+                                                <td className="px-4 py-3 text-xs text-center font-bold text-slate-500">{muestra.hora_moldeo || '-'}</td>
+                                                <td className="px-4 py-3 text-xs text-center font-black text-slate-700">{muestra.edad || '-'}</td>
+                                                <td className="px-4 py-3 text-xs text-center font-bold text-slate-700">{muestra.fecha_rotura || '-'}</td>
+                                                <td className="px-4 py-3 text-xs text-center font-black uppercase text-slate-500">{muestra.requiere_densidad ? 'SÍ' : 'NO'}</td>
                                             </tr>
                                         ))}
                                     </tbody>
