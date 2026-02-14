@@ -27,18 +27,46 @@ import { useFormPersist } from '../hooks/use-form-persist';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 
 // Validation Schema
-// Validation Schema
+// Helper: check if a DD/MM/YYYY date is within N days from today
+const isDateWithinDays = (dateStr: string, days: number): boolean => {
+    if (!dateStr || !/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return false;
+    const [d, m, y] = dateStr.split('/').map(Number);
+    const target = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffMs = target.getTime() - today.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= days;
+};
+
 const sampleSchema = z.object({
     item_numero: z.number().optional(),
     codigo_muestra_lem: z.string().optional(),
     identificacion_muestra: z.string().min(1, "Identificación Requerida"),
     estructura: z.string().min(1, "Estructura Requerida"),
-    fc_kg_cm2: z.union([z.number(), z.string()]).transform((val) => Number(val) || 280),
-    fecha_moldeo: z.string().optional(),
+    fc_kg_cm2: z.union([z.number(), z.string()]).refine(
+        (val) => Number(val) > 0,
+        { message: "F'c Requerido (mayor a 0)" }
+    ).transform((val) => Number(val)),
+    fecha_moldeo: z.string().min(1, "Fecha de moldeo Requerida").regex(/^\d{2}\/\d{2}\/\d{4}$/, "Formato DD/MM/YYYY"),
     hora_moldeo: z.string().optional(),
-    edad: z.union([z.number(), z.string()]).transform((val) => Number(val) || 7),
-    fecha_rotura: z.string().optional(),
+    edad: z.union([z.number(), z.string()]).refine(
+        (val) => Number(val) >= 1,
+        { message: "Edad Requerida (mínimo 1)" }
+    ).transform((val) => Number(val)),
+    fecha_rotura: z.string().min(1, "Fecha de rotura Requerida").regex(/^\d{2}\/\d{2}\/\d{4}$/, "Formato DD/MM/YYYY"),
     requiere_densidad: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.boolean(), z.string()]).optional().transform((val) => val === true || val === "true"))
+}).superRefine((data, ctx) => {
+    // hora_moldeo required only if fecha_moldeo is within 3 days of today
+    if (data.fecha_moldeo && isDateWithinDays(data.fecha_moldeo, 3)) {
+        if (!data.hora_moldeo || data.hora_moldeo.trim() === '') {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Hora requerida (moldeo dentro de 3 días)",
+                path: ['hora_moldeo'],
+            });
+        }
+    }
 });
 
 const formSchema = z.object({
@@ -48,9 +76,10 @@ const formSchema = z.object({
     cliente: z.string().min(1, "Cliente Requerido"),
     domicilio_legal: z.string().min(1, "Requerido"),
     ruc: z.string().min(8, "RUC inválido"),
-    persona_contacto: z.string().min(1, "Requerido"),
-    email: z.string().email("Email inválido"),
-    telefono: z.string().min(7, "Teléfono inválido"),
+    // Contact fields: individually optional, but 2 of 3 required (validated below)
+    persona_contacto: z.string().optional().default(""),
+    email: z.string().optional().default(""),
+    telefono: z.string().optional().default(""),
     solicitante: z.string().min(1, "Requerido"),
     domicilio_solicitante: z.string().min(1, "Requerido"),
     proyecto: z.string().min(1, "Requerido"),
@@ -63,6 +92,39 @@ const formSchema = z.object({
     recibido_por: z.string().min(1, "Requerido"),
     observaciones: z.string().optional(),
     muestras: z.array(sampleSchema).min(1, "Mínimo una muestra")
+}).superRefine((data, ctx) => {
+    // Validate at least 2 of 3 contact fields are filled
+    const filledCount = [
+        data.persona_contacto && data.persona_contacto.trim().length > 0,
+        data.email && data.email.trim().length > 0,
+        data.telefono && data.telefono.trim().length > 0,
+    ].filter(Boolean).length;
+
+    if (filledCount < 2) {
+        const msg = "Complete al menos 2 de 3: Nombre contacto, Email, Teléfono";
+        if (!data.persona_contacto || data.persona_contacto.trim().length === 0) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg, path: ['persona_contacto'] });
+        }
+        if (!data.email || data.email.trim().length === 0) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg, path: ['email'] });
+        }
+        if (!data.telefono || data.telefono.trim().length === 0) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg, path: ['telefono'] });
+        }
+    }
+
+    // If email IS provided, validate format
+    if (data.email && data.email.trim().length > 0) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(data.email.trim())) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Email inválido", path: ['email'] });
+        }
+    }
+
+    // If telefono IS provided, validate min length
+    if (data.telefono && data.telefono.trim().length > 0 && data.telefono.trim().length < 7) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Teléfono inválido (mín. 7 dígitos)", path: ['telefono'] });
+    }
 });
 
 type FormOutput = z.output<typeof formSchema>;
@@ -1077,7 +1139,12 @@ export default function OrdenForm() {
                             placeholder="AV. JAVIER PRADO ESTE 1234, SAN ISIDRO, LIMA" // Realistic Address
                             rows={2}
                         />
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                            <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                                <Info className="h-3 w-3" />
+                                Complete al menos 2 de los 3 campos siguientes:
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <InputField
                                     label="Persona Contacto:"
                                     {...register('persona_contacto')}
@@ -1087,20 +1154,21 @@ export default function OrdenForm() {
                                         setValue('entregado_por', e.target.value.toUpperCase(), { shouldValidate: true });
                                     }}
                                     error={errors.persona_contacto?.message}
-                                    placeholder="ING. JUAN PEREZ" // Realistic Contact
+                                    placeholder="ING. JUAN PEREZ"
                                 />
-                            <InputField
-                                label="E-mail:"
-                                {...register('email')}
-                                error={errors.email?.message}
-                                placeholder="J.PEREZ@CONSTRUCTORA.COM" // Realistic Email
-                            />
-                            <InputField
-                                label="Teléfono:"
-                                {...register('telefono')}
-                                error={errors.telefono?.message}
-                                placeholder="999888777" // Realistic Phone
-                            />
+                                <InputField
+                                    label="E-mail:"
+                                    {...register('email')}
+                                    error={errors.email?.message}
+                                    placeholder="J.PEREZ@CONSTRUCTORA.COM"
+                                />
+                                <InputField
+                                    label="Teléfono:"
+                                    {...register('telefono')}
+                                    error={errors.telefono?.message}
+                                    placeholder="999888777"
+                                />
+                            </div>
                         </div>
                     </Section>
 
