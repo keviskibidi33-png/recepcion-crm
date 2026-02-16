@@ -443,8 +443,8 @@ export default function OrdenForm() {
             codigo_muestra_lem: nextLem,
         };
 
-        insert(index + 1, newItem);
-        toast.success("Muestra duplicada");
+        append(newItem);
+        toast.success(`✓ Muestra duplicada (${currentMuestras.length + 1} total)`, { id: 'clone-toast' });
     };
 
     // Auto-calculate Fecha Rotura based on Fecha Moldeo + Edad
