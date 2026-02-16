@@ -399,23 +399,39 @@ export default function OrdenForm() {
 
 
 
-    // Handle Cloning
+    // Handle Cloning — supports multiple consecutive copies
     const handleClone = (index: number) => {
         const currentMuestras = watch('muestras');
         const itemToClone = currentMuestras[index];
+        if (!itemToClone) return;
 
-        if (itemToClone) {
-            const newItem = {
+        const input = window.prompt("¿Cuántas copias desea generar?", "1");
+        if (!input) return;
+        const count = Math.max(1, Math.min(50, parseInt(input) || 1));
+
+        // Helper to apply incrementString N times
+        const incrementN = (str: string | undefined, n: number) => {
+            let result = str;
+            for (let i = 0; i < n; i++) result = incrementString(result);
+            return result;
+        };
+
+        const newItems = [];
+        for (let i = 1; i <= count; i++) {
+            newItems.push({
                 ...itemToClone,
-                item_numero: (currentMuestras.length || 0) + 1, // Placeholder, fixed on submit
-                codigo_muestra_lem: incrementString(itemToClone.codigo_muestra_lem),
-                identificacion_muestra: incrementString(itemToClone.identificacion_muestra),
-                estructura: incrementString(itemToClone.estructura)
-            };
-
-            insert(index + 1, newItem);
-            toast.success("Muestra duplicada");
+                item_numero: (currentMuestras.length || 0) + i,
+                codigo_muestra_lem: incrementN(itemToClone.codigo_muestra_lem, i),
+                identificacion_muestra: incrementN(itemToClone.identificacion_muestra, i),
+                estructura: incrementN(itemToClone.estructura, i)
+            });
         }
+
+        // Insert all copies after the source row
+        for (let i = newItems.length - 1; i >= 0; i--) {
+            insert(index + 1, newItems[i]);
+        }
+        toast.success(`${count} muestra${count > 1 ? 's' : ''} duplicada${count > 1 ? 's' : ''}`);
     };
 
     // Auto-calculate Fecha Rotura based on Fecha Moldeo + Edad
