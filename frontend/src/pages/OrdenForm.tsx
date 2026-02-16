@@ -437,8 +437,11 @@ export default function OrdenForm() {
             nextLem = incrementString(nextLem);
         }
 
+        // Exclude react-hook-form internal 'id' to prevent ghost/empty rows
+        const { id: _rhfId, ...cloneData } = itemToClone as any;
+
         const newItem = {
-            ...itemToClone,
+            ...cloneData,
             item_numero: (currentMuestras.length || 0) + 1,
             codigo_muestra_lem: nextLem,
         };
