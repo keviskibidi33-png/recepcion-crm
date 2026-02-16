@@ -399,39 +399,30 @@ export default function OrdenForm() {
 
 
 
-    // Handle Cloning — supports multiple consecutive copies
+    // Handle Cloning — auto-detects last LEM code and increments consecutively
     const handleClone = (index: number) => {
         const currentMuestras = watch('muestras');
         const itemToClone = currentMuestras[index];
         if (!itemToClone) return;
 
-        const input = window.prompt("¿Cuántas copias desea generar?", "1");
-        if (!input) return;
-        const count = Math.max(1, Math.min(50, parseInt(input) || 1));
+        // Find the highest LEM code among all rows to ensure consecutive numbering
+        let lastLem = itemToClone.codigo_muestra_lem;
+        for (const m of currentMuestras) {
+            if (m.codigo_muestra_lem && lastLem) {
+                const numA = parseInt((m.codigo_muestra_lem.match(/^(\d+)/) || ['0'])[0]) || 0;
+                const numB = parseInt((lastLem.match(/^(\d+)/) || ['0'])[0]) || 0;
+                if (numA > numB) lastLem = m.codigo_muestra_lem;
+            }
+        }
 
-        // Helper to apply incrementString N times
-        const incrementN = (str: string | undefined, n: number) => {
-            let result = str;
-            for (let i = 0; i < n; i++) result = incrementString(result);
-            return result;
+        const newItem = {
+            ...itemToClone,
+            item_numero: (currentMuestras.length || 0) + 1,
+            codigo_muestra_lem: incrementString(lastLem),
         };
 
-        const newItems = [];
-        for (let i = 1; i <= count; i++) {
-            newItems.push({
-                ...itemToClone,
-                item_numero: (currentMuestras.length || 0) + i,
-                codigo_muestra_lem: incrementN(itemToClone.codigo_muestra_lem, i),
-                identificacion_muestra: incrementN(itemToClone.identificacion_muestra, i),
-                estructura: incrementN(itemToClone.estructura, i)
-            });
-        }
-
-        // Insert all copies after the source row
-        for (let i = newItems.length - 1; i >= 0; i--) {
-            insert(index + 1, newItems[i]);
-        }
-        toast.success(`${count} muestra${count > 1 ? 's' : ''} duplicada${count > 1 ? 's' : ''}`);
+        insert(index + 1, newItem);
+        toast.success("Muestra duplicada");
     };
 
     // Auto-calculate Fecha Rotura based on Fecha Moldeo + Edad
