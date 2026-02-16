@@ -661,7 +661,7 @@ export default function OrdenForm() {
     if (isEditMode && isLoadingOrden) return <div className="p-20 text-center font-black uppercase tracking-widest text-zinc-300">Cargando Datos...</div>;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] pb-20 text-slate-900 font-sans antialiased">
+        <div className="h-screen overflow-y-auto bg-[#F8FAFC] pb-20 text-slate-900 font-sans antialiased">
             {/* Soft Header */}
             <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm px-6 py-4">
                 <div className="max-w-5xl mx-auto">
