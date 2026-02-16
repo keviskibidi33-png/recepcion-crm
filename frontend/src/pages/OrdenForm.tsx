@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient, useQuery } from 'react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -925,7 +925,7 @@ export default function OrdenForm() {
                                         <th className="px-2 py-4 w-48">Estructura</th>
                                         <th className="px-2 py-4 w-16 text-center">F'c</th>
                                         <th className="px-2 py-4 w-24 text-center">Fecha moldeo</th>
-                                        <th className="px-2 py-4 w-12 text-center">Hora</th>
+                                        <th className="px-2 py-4 w-20 text-center">Hora</th>
                                         <th className="px-2 py-4 w-12 text-center">Edad</th>
                                         <th className="px-2 py-4 w-24 text-center">Fecha rotura</th>
                                         <th className="px-2 py-4 w-16 text-center">Densidad</th>
@@ -1014,10 +1014,31 @@ export default function OrdenForm() {
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3">
-                                                    <input
-                                                        {...register(`muestras.${index}.hora_moldeo`)}
-                                                        className={`w-12 mx-auto block px-2 py-1.5 text-xs font-bold text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.hora_moldeo ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="10"
+                                                    <Controller
+                                                        name={`muestras.${index}.hora_moldeo` as const}
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <input
+                                                                type="text"
+                                                                value={field.value || ''}
+                                                                onChange={(e) => {
+                                                                    let v = e.target.value.replace(/[^\d:]/g, '');
+                                                                    const digits = v.replace(/:/g, '');
+                                                                    if (digits.length <= 6) {
+                                                                        let formatted = '';
+                                                                        for (let i = 0; i < digits.length; i++) {
+                                                                            if (i === 2 || i === 4) formatted += ':';
+                                                                            formatted += digits[i];
+                                                                        }
+                                                                        field.onChange(formatted);
+                                                                    }
+                                                                }}
+                                                                placeholder="00:00:00"
+                                                                className={`w-20 mx-auto block px-2 py-1.5 text-xs font-bold text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.hora_moldeo ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
+                                                                inputMode="numeric"
+                                                                maxLength={8}
+                                                            />
+                                                        )}
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3">
