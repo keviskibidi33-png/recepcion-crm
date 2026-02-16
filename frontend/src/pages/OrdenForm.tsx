@@ -157,6 +157,12 @@ const incrementString = (str: string | undefined) => {
     });
 };
 
+const extractLeadingNumber = (value: string | undefined) => {
+    if (!value) return Number.NaN;
+    const match = value.trim().match(/^(\d+)/);
+    return match ? Number(match[1]) : Number.NaN;
+};
+
 const getFormattedDate = (date: Date = new Date()) => {
     const d = date.getDate().toString().padStart(2, '0');
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -405,20 +411,34 @@ export default function OrdenForm() {
         const itemToClone = currentMuestras[index];
         if (!itemToClone) return;
 
-        // Find the highest LEM code among all rows to ensure consecutive numbering
-        let lastLem = itemToClone.codigo_muestra_lem;
+        const existingCodes = new Set(
+            currentMuestras
+                .map((m) => m.codigo_muestra_lem?.trim().toUpperCase())
+                .filter((code): code is string => Boolean(code))
+        );
+
+        // Use the highest numeric prefix across all rows as base (e.g. 9091-CO-26 -> 9092-CO-26)
+        let lastLem = itemToClone.codigo_muestra_lem?.trim() || '';
         for (const m of currentMuestras) {
-            if (m.codigo_muestra_lem && lastLem) {
-                const numA = parseInt((m.codigo_muestra_lem.match(/^(\d+)/) || ['0'])[0]) || 0;
-                const numB = parseInt((lastLem.match(/^(\d+)/) || ['0'])[0]) || 0;
-                if (numA > numB) lastLem = m.codigo_muestra_lem;
+            const candidate = m.codigo_muestra_lem?.trim();
+            if (!candidate) continue;
+
+            const candidateNum = extractLeadingNumber(candidate);
+            const lastNum = extractLeadingNumber(lastLem);
+            if (!Number.isNaN(candidateNum) && (Number.isNaN(lastNum) || candidateNum > lastNum)) {
+                lastLem = candidate;
             }
+        }
+
+        let nextLem = incrementString(lastLem);
+        while (nextLem && existingCodes.has(nextLem.trim().toUpperCase())) {
+            nextLem = incrementString(nextLem);
         }
 
         const newItem = {
             ...itemToClone,
             item_numero: (currentMuestras.length || 0) + 1,
-            codigo_muestra_lem: incrementString(lastLem),
+            codigo_muestra_lem: nextLem,
         };
 
         insert(index + 1, newItem);
@@ -977,9 +997,15 @@ export default function OrdenForm() {
                                                         {...register(`muestras.${index}.item_numero`, { valueAsNumber: true })}
                                                     />
                                                 </td>
-                                                <td className="px-1 py-3 w-28 focus-within:z-10">
-                                                    <input
+                                                <td className="px-1 py-3 w-28 focus-within:z-10 align-top">
+                                                    <textarea
                                                         {...register(`muestras.${index}.codigo_muestra_lem`)}
+                                                        rows={1}
+                                                        onInput={(e) => {
+                                                            const t = e.currentTarget;
+                                                            t.style.height = 'auto';
+                                                            t.style.height = t.scrollHeight + 'px';
+                                                        }}
                                                         onBlur={(e) => {
                                                             const val = e.target.value.trim();
                                                             if (/^\d+$/.test(val)) {
@@ -987,7 +1013,14 @@ export default function OrdenForm() {
                                                                 setValue(`muestras.${index}.codigo_muestra_lem`, `${val}-CO-${year}`, { shouldValidate: true });
                                                             }
                                                         }}
-                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.codigo_muestra_lem ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
+                                                        ref={(el) => {
+                                                            register(`muestras.${index}.codigo_muestra_lem`).ref(el);
+                                                            if (el) {
+                                                                el.style.height = 'auto';
+                                                                el.style.height = el.scrollHeight + 'px';
+                                                            }
+                                                        }}
+                                                        className={`w-full px-2 py-1.5 text-xs font-bold uppercase border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all resize-none leading-5 overflow-hidden ${sampleErrors?.codigo_muestra_lem ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
                                                         placeholder="1483"
                                                     />
                                                 </td>
