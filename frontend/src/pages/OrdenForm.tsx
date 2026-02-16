@@ -960,7 +960,7 @@ export default function OrdenForm() {
                                 <thead>
                                     <tr className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-900 border-b border-slate-100">
                                         <th className="px-4 py-4 w-12 text-center">N°</th>
-                                        <th className="px-2 py-4 w-28">Código LEM</th>
+                                        <th className="px-2 py-4 w-36">Código LEM</th>
                                         <th className="px-2 py-4 w-40">Código</th>
                                         <th className="px-2 py-4 w-48">Estructura</th>
                                         <th className="px-2 py-4 w-16 text-center">F'c</th>
@@ -987,7 +987,7 @@ export default function OrdenForm() {
                                                         {...register(`muestras.${index}.item_numero`, { valueAsNumber: true })}
                                                     />
                                                 </td>
-                                                <td className="px-1 py-3 w-28 focus-within:z-10 align-top">
+                                                <td className="px-1 py-3 w-36 focus-within:z-10 align-top">
                                                     <textarea
                                                         {...register(`muestras.${index}.codigo_muestra_lem`)}
                                                         rows={1}
