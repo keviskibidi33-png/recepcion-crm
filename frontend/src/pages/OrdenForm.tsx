@@ -10,7 +10,7 @@ import {
     Copy,
     Plus,
     Trash2,
-    ChevronLeft,
+    X,
     Save,
     Info,
     ListFilter,
@@ -670,12 +670,6 @@ export default function OrdenForm() {
                 <div className="max-w-5xl mx-auto">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleClose}
-                                className="p-2 hover:bg-slate-100 rounded-lg transition-all text-slate-400 hover:text-slate-600"
-                            >
-                                <ChevronLeft className="h-6 w-6" />
-                            </button>
                             <h1 className="text-xl font-black text-[#003366] uppercase tracking-tight flex items-center gap-4">
                                 Recepción de Muestra Cilíndricas de Concreto
                                 {hasSavedData && (
@@ -697,6 +691,13 @@ export default function OrdenForm() {
                                 )}
                             </h1>
                         </div>
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
+                        >
+                            <X className="h-4 w-4" /> <span>Cancelar</span>
+                        </button>
                     </div>
 
                     {/* Metadata Row */}
