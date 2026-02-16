@@ -1364,10 +1364,11 @@ export default function OrdenForm() {
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleConfirmDelete}
-                title="recepcion.geofal.com.pe dice"
-                message="¿Estás seguro de eliminar el borrador?"
-                confirmText="Aceptar"
+                title="¿Eliminar borrador?"
+                message="Esta acción borrará todos los datos temporales no guardados. No se puede deshacer."
+                confirmText="Sí, eliminar"
                 cancelText="Cancelar"
+                type="danger"
             />
 
             {/* Success Modal after editing */}
