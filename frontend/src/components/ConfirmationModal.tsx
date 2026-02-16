@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, AlertTriangle, Info, CheckCircle, AlertCircle } from 'lucide-react';
+import { AlertTriangle, Info, CheckCircle, AlertCircle } from 'lucide-react';
 
 export type ModalType = 'danger' | 'warning' | 'info' | 'success';
 
@@ -68,15 +68,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
             <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
                 <div className="relative transform overflow-hidden rounded-[2rem] bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-slate-200">
-
-                    {/* Close Button */}
-                    <button
-                        onClick={onClose}
-                        disabled={isLoading}
-                        className="absolute right-6 top-6 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
 
                     <div className="px-8 pt-10 pb-8">
                         <div className="flex flex-col items-center text-center">
