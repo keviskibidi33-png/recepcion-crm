@@ -21,7 +21,8 @@ import {
     CheckCircle2,
     XCircle,
     Loader2,
-    ChevronLeft
+    ChevronLeft,
+    Upload
 } from 'lucide-react';
 import { recepcionApi } from '../services/recepcionApi';
 import { useFormPersist } from '../hooks/use-form-persist';
@@ -88,8 +89,8 @@ const formSchema = z.object({
     ubicacion: z.string().min(1, "Requerido"),
     fecha_recepcion: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Fecha inválida (DD/MM/YYYY)"),
     fecha_estimada_culminacion: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Fecha inválida (DD/MM/YYYY)"),
-    emision_fisica: z.boolean(),
-    emision_digital: z.boolean(),
+    emision_fisica: z.preprocess((val) => val === true || val === "true" || val === "on", z.boolean()),
+    emision_digital: z.preprocess((val) => val === true || val === "true" || val === "on", z.boolean()),
     entregado_por: z.string().min(1, "Requerido"),
     recibido_por: z.string().min(1, "Requerido"),
     observaciones: z.string().optional(),
@@ -671,6 +672,61 @@ export default function OrdenForm() {
         }
     };
 
+    // Import Excel Logic
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            toast.loading('Importando datos...');
+            const data = await recepcionApi.importarExcel(file);
+            
+            // Populate fields
+            setValue('cliente', data.cliente || '', { shouldValidate: true });
+            setClienteSearch(data.cliente || '');
+            isSelectionRef.current = true;
+            
+            setValue('ruc', data.ruc || '', { shouldValidate: true });
+            setValue('persona_contacto', data.persona_contacto || '', { shouldValidate: true });
+            setValue('email', data.email || '', { shouldValidate: true });
+            setValue('telefono', data.telefono || '', { shouldValidate: true });
+            setValue('proyecto', data.proyecto || '', { shouldValidate: true });
+            setValue('ubicacion', data.ubicacion || '', { shouldValidate: true });
+            setValue('solicitante', data.solicitante || '', { shouldValidate: true });
+            setValue('domicilio_solicitante', data.domicilio_solicitante || '', { shouldValidate: true });
+            
+            // Samples
+            if (data.muestras && Array.isArray(data.muestras)) {
+                 const newMuestras = data.muestras.map((m: any, idx: number) => ({
+                    item_numero: idx + 1,
+                    identificacion_muestra: m.identificacion_muestra,
+                    estructura: m.estructura || '',
+                    fc_kg_cm2: m.fc_kg_cm2 || 280,
+                    edad: m.edad || 7,
+                    requiere_densidad: m.requiere_densidad || false,
+                    fecha_moldeo: m.fecha_moldeo || '',
+                    hora_moldeo: m.hora_moldeo || '',
+                    fecha_rotura: m.fecha_rotura || '',
+                    codigo_muestra_lem: m.codigo_muestra_lem || ''
+                }));
+                setValue('muestras', newMuestras);
+            }
+            
+            toast.dismiss();
+            toast.success('¡Datos importados correctamente!');
+            
+            // Reset input
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            
+        } catch (error: any) {
+            toast.dismiss();
+            toast.error(`Error al importar: ${error.message || 'Desconocido'}`);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     if (isEditMode && isLoadingOrden) return <div className="p-20 text-center font-black uppercase tracking-widest text-zinc-300">Cargando Datos...</div>;
 
     return (
@@ -693,6 +749,25 @@ export default function OrdenForm() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3 w-full sm:w-auto">
+                            {/* Hidden Input for Import */}
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                className="hidden" 
+                                accept=".xlsx" 
+                                onChange={handleImportExcel} 
+                            />
+                            
+                            {!isEditMode && (
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200"
+                                >
+                                    <Upload size={16} /> <span>Importar Datos (Excel)</span>
+                                </button>
+                            )}
+
                             {hasSavedData && !isEditMode && (
                                 <button
                                     type="button"
@@ -721,31 +796,36 @@ export default function OrdenForm() {
 
             <main className="max-w-7xl mx-auto px-6 py-12 space-y-12">
                 <form onSubmit={handleSubmit(onSubmit as any, (errors) => {
-                    console.error("DEBUG - Validation Errors:", errors);
+                    console.error("DEBUG - Validation Errors:", JSON.stringify(errors, (key, value) => {
+                        if (key === 'ref') return undefined; // Skip DOM refs in serialization
+                        return value;
+                    }, 2));
 
-                    // Recursive helper to find the first actual error message
-                    const findFirstError = (errObj: any): string | null => {
-                        if (errObj.message) return errObj.message;
-                        if (Array.isArray(errObj)) {
-                            for (const item of errObj) {
-                                if (item) {
-                                    const msg = findFirstError(item);
-                                    if (msg) return msg;
+                    // Collect ALL errors for debug toast - improved to show field names clearly
+                    const getAllErrorMessages = (errObj: any, prefix = ''): string[] => {
+                        let messages: string[] = [];
+                        if (errObj.message && typeof errObj.message === 'string') {
+                            const fieldName = prefix || 'formulario';
+                            messages.push(`${fieldName}: ${errObj.message}`);
+                        }
+                        if (typeof errObj === 'object' && errObj !== null) {
+                            for (const key in errObj) {
+                                if (key !== 'message' && key !== 'ref' && key !== 'type') {
+                                    const newPrefix = prefix ? `${prefix}.${key}` : key;
+                                    messages = [...messages, ...getAllErrorMessages(errObj[key], newPrefix)];
                                 }
                             }
                         }
-                        if (typeof errObj === 'object') {
-                            for (const key in errObj) {
-                                const msg = findFirstError(errObj[key]);
-                                if (msg) return msg;
-                            }
-                        }
-                        return null;
+                        return messages;
                     };
 
-                    const msg = findFirstError(errors);
-                    if (msg) {
-                        toast.error(`Error de validación: ${msg}`);
+                    const allErrors = getAllErrorMessages(errors);
+                    if (allErrors.length > 0) {
+                        // Show first 5 errors in toast for better debugging
+                        toast.error(`Errores de validación:\n${allErrors.slice(0, 5).join('\n')}${allErrors.length > 5 ? `\n... y ${allErrors.length - 5} más` : ''}`, {
+                            duration: 8000,
+                            style: { textAlign: 'left', whiteSpace: 'pre-line' }
+                        });
                     } else {
                         toast.error("Por favor revise los campos en rojo");
                     }
