@@ -25,8 +25,38 @@ export function useFormPersist<T extends FieldValues>(
             try {
                 console.debug(`[FormPersist] Loading saved data for key: ${formKey}`);
                 const parsed = JSON.parse(savedData);
+
+                // Sanitize muestras array: remove ghost/empty entries
+                // A muestra is considered empty if it lacks both identificacion_muestra and fecha_moldeo
+                if (Array.isArray(parsed.muestras)) {
+                    const originalCount = parsed.muestras.length;
+                    parsed.muestras = parsed.muestras.filter((m: any) => {
+                        if (!m) return false;
+                        const hasIdentificacion = m.identificacion_muestra && String(m.identificacion_muestra).trim() !== '';
+                        const hasFechaMoldeo = m.fecha_moldeo && String(m.fecha_moldeo).trim() !== '';
+                        return hasIdentificacion || hasFechaMoldeo;
+                    });
+                    // Ensure at least one empty muestra exists for new forms
+                    if (parsed.muestras.length === 0) {
+                        parsed.muestras = [{
+                            identificacion_muestra: '',
+                            estructura: '',
+                            fc_kg_cm2: '',
+                            edad: '',
+                            requiere_densidad: '',
+                            fecha_moldeo: '',
+                            hora_moldeo: '',
+                            fecha_rotura: '',
+                            codigo_muestra_lem: ''
+                        }];
+                    }
+                    if (parsed.muestras.length !== originalCount) {
+                        console.debug(`[FormPersist] Removed ${originalCount - parsed.muestras.length} ghost muestra(s)`);
+                    }
+                }
+
                 setHasSavedData(true);
-                // Reset form with saved data to populate fields
+                // Reset form with sanitized data to populate fields
                 reset(parsed as DefaultValues<T>);
             } catch (e) {
                 console.error('Error loading saved form data:', e);
