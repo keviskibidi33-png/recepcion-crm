@@ -1320,13 +1320,6 @@ export default function OrdenForm() {
                     {/* FORM FOOTER */}
                     <div className="flex items-center justify-end gap-4 pt-10">
                         <button
-                            type="button"
-                            onClick={() => reset()}
-                            className="px-8 py-3 bg-white border border-slate-200 text-slate-400 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all"
-                        >
-                            Limpiar
-                        </button>
-                        <button
                             type="submit"
                             disabled={isSubmitting}
                             className="flex items-center gap-2 px-10 py-3 bg-[#0070F3] text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50"
