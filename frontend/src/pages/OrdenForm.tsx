@@ -259,7 +259,50 @@ export default function OrdenForm() {
             window.history.replaceState({}, document.title);
             toast.success(`Datos importados: ${d.muestras?.length || 0} muestras cargadas al formulario`);
         }
-    }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [location.state, isEditMode, setValue]);
+
+    // Listen for data from parent Shell (crm-geofal)
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'IMPORT_DATA' && !isEditMode) {
+                const d = event.data.data;
+                console.debug('[OrdenForm] Received IMPORT_DATA from parent:', d);
+                
+                // Pre-fill header
+                if (d.cliente) setValue('cliente', d.cliente);
+                if (d.ruc) setValue('ruc', d.ruc);
+                if (d.proyecto) setValue('proyecto', d.proyecto);
+                if (d.ubicacion) setValue('ubicacion', d.ubicacion);
+                if (d.solicitante) setValue('solicitante', d.solicitante);
+                if (d.domicilio_solicitante) setValue('domicilio_solicitante', d.domicilio_solicitante);
+                if (d.domicilio_legal) setValue('domicilio_legal', d.domicilio_legal || d.ubicacion || '');
+                if (d.persona_contacto) setValue('persona_contacto', d.persona_contacto);
+                if (d.telefono) setValue('telefono', d.telefono);
+                if (d.email) setValue('email', d.email);
+
+                // Pre-fill muestras
+                if (Array.isArray(d.muestras) && d.muestras.length > 0) {
+                    const formattedMuestras = d.muestras.map((m: any, idx: number) => ({
+                        item_numero: idx + 1,
+                        codigo_muestra_lem: m.codigo_muestra_lem || '',
+                        identificacion_muestra: m.identificacion_muestra || '',
+                        estructura: m.estructura || '',
+                        fc_kg_cm2: m.fc_kg_cm2 || '' as any,
+                        edad: m.edad || '' as any,
+                        fecha_moldeo: m.fecha_moldeo || '',
+                        hora_moldeo: m.hora_moldeo || '',
+                        fecha_rotura: m.fecha_rotura || '',
+                        requiere_densidad: !!m.requiere_densidad
+                    }));
+                    setValue('muestras', formattedMuestras);
+                }
+                toast.success(`Datos importados desde Excel: ${d.muestras?.length || 0} muestras cargadas`);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [isEditMode, setValue]);
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
