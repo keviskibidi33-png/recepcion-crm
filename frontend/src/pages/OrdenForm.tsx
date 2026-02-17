@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient, useQuery } from 'react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'react-hot-toast';
@@ -193,6 +193,7 @@ export default function OrdenForm() {
     }>({ estado: 'idle' });
 
     const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const location = useLocation();
 
     const isEditMode = !!id;
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -217,6 +218,48 @@ export default function OrdenForm() {
             }
         }
     );
+
+    // Pre-fill from imported Excel data (via navigation state)
+    useEffect(() => {
+        const state = location.state as { importedData?: any } | null;
+        if (state?.importedData && !isEditMode) {
+            const d = state.importedData;
+            console.debug('[OrdenForm] Pre-filling from imported Excel:', d);
+
+            // Pre-fill header fields
+            if (d.cliente) setValue('cliente', d.cliente);
+            if (d.ruc) setValue('ruc', d.ruc);
+            if (d.persona_contacto) setValue('persona_contacto', d.persona_contacto);
+            if (d.telefono) setValue('telefono', d.telefono);
+            if (d.email) setValue('email', d.email);
+            if (d.proyecto) setValue('proyecto', d.proyecto);
+            if (d.ubicacion) setValue('ubicacion', d.ubicacion);
+            if (d.solicitante) setValue('solicitante', d.solicitante);
+            if (d.domicilio_solicitante) setValue('domicilio_solicitante', d.domicilio_solicitante);
+            if (d.domicilio_legal) setValue('domicilio_legal', d.domicilio_legal || d.ubicacion || '');
+
+            // Pre-fill muestras array
+            if (Array.isArray(d.muestras) && d.muestras.length > 0) {
+                const formattedMuestras = d.muestras.map((m: any, idx: number) => ({
+                    item_numero: idx + 1,
+                    codigo_muestra_lem: m.codigo_muestra_lem || '',
+                    identificacion_muestra: m.identificacion_muestra || '',
+                    estructura: m.estructura || '',
+                    fc_kg_cm2: m.fc_kg_cm2 || '' as any,
+                    edad: m.edad || '' as any,
+                    fecha_moldeo: m.fecha_moldeo || '',
+                    hora_moldeo: m.hora_moldeo || '',
+                    fecha_rotura: m.fecha_rotura || '',
+                    requiere_densidad: m.requiere_densidad || false,
+                }));
+                setValue('muestras', formattedMuestras);
+            }
+
+            // Clear navigation state to prevent re-fill on re-render
+            window.history.replaceState({}, document.title);
+            toast.success(`Datos importados: ${d.muestras?.length || 0} muestras cargadas al formulario`);
+        }
+    }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 

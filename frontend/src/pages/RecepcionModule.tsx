@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -17,7 +17,8 @@ import {
     LayoutGrid,
     List,
     RefreshCw,
-    FileSpreadsheet
+    FileSpreadsheet,
+    Upload
 } from 'lucide-react'
 import { recepcionApi } from '../services/recepcionApi'
 import toast from 'react-hot-toast'
@@ -29,6 +30,8 @@ export default function RecepcionModule() {
     })
     const [deleteId, setDeleteId] = useState<number | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [isImporting, setIsImporting] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
     const navigate = useNavigate()
     const queryClient = useQueryClient()
 
@@ -42,6 +45,36 @@ export default function RecepcionModule() {
             retry: 1
         }
     )
+
+    // Handle Excel import
+    const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xlsm')) {
+            toast.error('Solo se permiten archivos Excel (.xlsx, .xlsm)')
+            return
+        }
+
+        setIsImporting(true)
+        const loadingToast = toast.loading('Procesando Excel...')
+
+        try {
+            const importedData = await recepcionApi.importarExcel(file)
+            toast.dismiss(loadingToast)
+            toast.success(`Excel importado: ${importedData.muestras?.length || 0} muestras detectadas`)
+            // Navigate to form with pre-filled data
+            navigate('/migration/nueva-recepcion', { state: { importedData } })
+        } catch (error: any) {
+            toast.dismiss(loadingToast)
+            const msg = error.response?.data?.detail || error.message || 'Error procesando Excel'
+            toast.error(msg)
+        } finally {
+            setIsImporting(false)
+            // Reset file input so the same file can be re-selected
+            if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+    }
 
     // The following code block seems to be intended for a form submission component,
     // not directly for this RecepcionModule which primarily lists and deletes.
@@ -84,19 +117,36 @@ export default function RecepcionModule() {
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] p-8 space-y-8 font-sans antialiased">
+            {/* Hidden file input for Excel import */}
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xlsm"
+                onChange={handleImportExcel}
+                className="hidden"
+            />
+
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight">Recepciones</h1>
                     <p className="text-slate-500 font-medium mt-1">Gestiona los registros de ingreso de muestras</p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     <button className="p-3 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
                         <RefreshCw className="h-5 w-5" />
                     </button>
                     <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isImporting}
+                        className="flex items-center gap-3 px-5 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Upload className="h-5 w-5" strokeWidth={3} />
+                        {isImporting ? 'Importando...' : 'Importar Recepción'}
+                    </button>
+                    <button
                         onClick={() => navigate('/migration/nueva-recepcion')}
-                        className="flex items-center gap-3 px-6 py-3 bg-[#0070F3] text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md shadow-blue-500/20 active:scale-95"
+                        className="flex items-center gap-3 px-5 py-3 bg-[#0070F3] text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md shadow-blue-500/20 active:scale-95"
                     >
                         <Plus className="h-5 w-5" strokeWidth={3} />
                         Nueva Recepción
