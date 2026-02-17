@@ -99,5 +99,16 @@ export const recepcionApi = {
             console.error("Error fetching quote by token:", error);
             throw error;
         }
+    },
+
+    importarExcel: async (file: File): Promise<any> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await api.post('/api/recepcion/importar-excel', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
     }
 };

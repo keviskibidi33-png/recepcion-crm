@@ -180,6 +180,8 @@ export default function OrdenForm() {
     const handleItemsTableKeyDown = useEnterTableNavigation();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRefExport = useRef<HTMLInputElement>(null);
 
     // Search status state for "Premium" interface
     const [recepcionStatus, setRecepcionStatus] = useState<{
@@ -197,6 +199,15 @@ export default function OrdenForm() {
 
     const isEditMode = !!id;
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    
+    const form = useForm<FormInput>({
+        resolver: zodResolver(formSchema) as any,
+        defaultValues: {
+            muestras: [{ item_numero: 1, identificacion_muestra: "", estructura: "", fc_kg_cm2: "" as any, edad: "" as any, requiere_densidad: false, fecha_moldeo: "", hora_moldeo: "", fecha_rotura: "", codigo_muestra_lem: "" }]
+        }
+    });
+
+    const { register, control, handleSubmit, setValue, watch, reset, getValues, formState: { errors } } = form;
 
     // Helper to handle closing/return
     const handleClose = () => {
@@ -259,7 +270,61 @@ export default function OrdenForm() {
             window.history.replaceState({}, document.title);
             toast.success(`Datos importados: ${d.muestras?.length || 0} muestras cargadas al formulario`);
         }
-    }, [location.state, isEditMode, setValue]);
+    }, [location.state, isEditMode, setValue, reset, getValues]);
+
+    const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xlsm')) {
+            toast.error("Solo se permiten archivos Excel (.xlsx, .xlsm)");
+            return;
+        }
+
+        setIsImporting(true);
+        const loadingToast = toast.loading("Procesando Excel...");
+
+        try {
+            const data = await recepcionApi.importarExcel(file);
+            toast.dismiss(loadingToast);
+            toast.success(`Excel importado: ${data.muestras?.length || 0} muestras detectadas`);
+            
+            // Pre-fill header
+            if (data.cliente) setValue('cliente', data.cliente);
+            if (data.ruc) setValue('ruc', data.ruc);
+            if (data.proyecto) setValue('proyecto', data.proyecto);
+            if (data.ubicacion) setValue('ubicacion', data.ubicacion);
+            if (data.solicitante) setValue('solicitante', data.solicitante);
+            if (data.domicilio_solicitante) setValue('domicilio_solicitante', data.domicilio_solicitante);
+            if (data.domicilio_legal) setValue('domicilio_legal', data.domicilio_legal || data.ubicacion || '');
+            if (data.persona_contacto) setValue('persona_contacto', data.persona_contacto);
+            if (data.telefono) setValue('telefono', data.telefono);
+            if (data.email) setValue('email', data.email);
+
+            // Pre-fill muestras
+            if (Array.isArray(data.muestras) && data.muestras.length > 0) {
+                const formattedMuestras = data.muestras.map((m: any, idx: number) => ({
+                    item_numero: idx + 1,
+                    codigo_muestra_lem: m.codigo_muestra_lem || '',
+                    identificacion_muestra: m.identificacion_muestra || '',
+                    estructura: m.estructura || '',
+                    fc_kg_cm2: m.fc_kg_cm2 || '' as any,
+                    edad: m.edad || '' as any,
+                    fecha_moldeo: m.fecha_moldeo || '',
+                    hora_moldeo: m.hora_moldeo || '',
+                    fecha_rotura: m.fecha_rotura || '',
+                    requiere_densidad: !!m.requiere_densidad
+                }));
+                reset({ ...getValues(), muestras: formattedMuestras });
+            }
+        } catch (error: any) {
+            toast.dismiss(loadingToast);
+            toast.error(error.message || "Error al procesar el Excel");
+        } finally {
+            setIsImporting(false);
+            if (fileInputRefExport.current) fileInputRefExport.current.value = "";
+        }
+    };
 
     // Listen for data from parent Shell (crm-geofal)
     useEffect(() => {
@@ -294,7 +359,7 @@ export default function OrdenForm() {
                         fecha_rotura: m.fecha_rotura || '',
                         requiere_densidad: !!m.requiere_densidad
                     }));
-                    setValue('muestras', formattedMuestras);
+                    reset({ ...getValues(), muestras: formattedMuestras });
                 }
                 toast.success(`Datos importados desde Excel: ${d.muestras?.length || 0} muestras cargadas`);
             }
@@ -302,7 +367,7 @@ export default function OrdenForm() {
 
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
-    }, [isEditMode, setValue]);
+    }, [isEditMode, setValue, reset, getValues]);
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -351,24 +416,17 @@ export default function OrdenForm() {
         }]
     };
 
-    const form = useForm<FormInput>({
-        resolver: zodResolver(formSchema) as any,
-        defaultValues
-    });
-
-    const { register, control, handleSubmit, setValue, watch, reset, formState: { errors } } = form;
-
-    const { fields, append, remove, insert } = useFieldArray({
-        control,
-        name: 'muestras'
-    });
-
     // Memoize form methods to avoid re-triggering persistence effects
     const formMethodsMemo = React.useMemo(() => ({
         watch,
         setValue,
         reset
     }), [watch, setValue, reset]);
+
+    const { fields, append, remove, insert } = useFieldArray({
+        control,
+        name: 'muestras'
+    });
 
     // Local Storage Persistence
     const { clearSavedData, hasSavedData } = useFormPersist(`recepcion-form-${id || 'new'}`, formMethodsMemo as any, !id); // Enabled only if creating new
@@ -758,111 +816,69 @@ export default function OrdenForm() {
         }
     };
 
-    // Import Excel Logic
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        try {
-            toast.loading('Importando datos...');
-            const data = await recepcionApi.importarExcel(file);
-            
-            // Populate fields
-            setValue('cliente', data.cliente || '', { shouldValidate: true });
-            setClienteSearch(data.cliente || '');
-            isSelectionRef.current = true;
-            
-            setValue('ruc', data.ruc || '', { shouldValidate: true });
-            setValue('persona_contacto', data.persona_contacto || '', { shouldValidate: true });
-            setValue('email', data.email || '', { shouldValidate: true });
-            setValue('telefono', data.telefono || '', { shouldValidate: true });
-            setValue('proyecto', data.proyecto || '', { shouldValidate: true });
-            setValue('ubicacion', data.ubicacion || '', { shouldValidate: true });
-            setValue('solicitante', data.solicitante || '', { shouldValidate: true });
-            setValue('domicilio_solicitante', data.domicilio_solicitante || '', { shouldValidate: true });
-            
-            // Samples
-            if (data.muestras && Array.isArray(data.muestras)) {
-                 const newMuestras = data.muestras.map((m: any, idx: number) => ({
-                    item_numero: idx + 1,
-                    identificacion_muestra: m.identificacion_muestra,
-                    estructura: m.estructura || '',
-                    fc_kg_cm2: m.fc_kg_cm2 || 280,
-                    edad: m.edad || 7,
-                    requiere_densidad: m.requiere_densidad || false,
-                    fecha_moldeo: m.fecha_moldeo || '',
-                    hora_moldeo: m.hora_moldeo || '',
-                    fecha_rotura: m.fecha_rotura || '',
-                    codigo_muestra_lem: m.codigo_muestra_lem || ''
-                }));
-                setValue('muestras', newMuestras);
-            }
-            
-            toast.dismiss();
-            toast.success('¡Datos importados correctamente!');
-            
-            // Reset input
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            
-        } catch (error: any) {
-            toast.dismiss();
-            toast.error(`Error al importar: ${error.message || 'Desconocido'}`);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-    };
-
-    if (isEditMode && isLoadingOrden) return <div className="p-20 text-center font-black uppercase tracking-widest text-zinc-300">Cargando Datos...</div>;
+    if (isEditMode && isLoadingOrden) return <div className="p-20 text-center font-black uppercase tracking-widest text-zinc-300 flex items-center justify-center gap-3">
+        <Loader2 className="animate-spin h-6 w-6" />
+        Cargando Datos...
+    </div>;
 
     return (
         <div className="h-screen overflow-y-auto bg-[#F8FAFC] pb-20 text-slate-900 font-sans antialiased">
             {/* Soft Header */}
             <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm px-6 py-4">
                 <div className="max-w-5xl mx-auto">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                        <div className="flex items-center gap-4">
-                            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 transition-colors">
-                                <ChevronLeft size={24} />
-                            </button>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                        <div className="flex items-center gap-6">
+                            <div className="h-16 w-16 rounded-[2rem] bg-[#0070F3] flex items-center justify-center text-white shadow-xl shadow-blue-500/20 transform -rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                                <Plus className="h-8 w-8" strokeWidth={3} />
+                            </div>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900 tracking-tight">
-                                    {isEditMode ? 'Editar Recepción' : 'Recepción de Muestras Cilíndricas'}
-                                </h1>
-                                <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                                    {isEditMode ? <span>ID: <span className="font-mono text-gray-700">#{id}</span></span> : 'Registro de nuevas muestras'}
+                                <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">
+                                    {isEditMode ? 'Editar Recepción' : 'Nueva Recepción'}
+                                </h2>
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1 flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+                                    Registro Geofal v2.0
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
-                            {/* Hidden Input for Import */}
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                className="hidden" 
-                                accept=".xlsx" 
-                                onChange={handleImportExcel} 
-                            />
-                            
-                            {!isEditMode && (
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200"
-                                >
-                                    <Upload size={16} /> <span>Importar Datos (Excel)</span>
-                                </button>
-                            )}
 
-                            {hasSavedData && !isEditMode && (
-                                <button
-                                    type="button"
-                                    onClick={() => setIsDeleteModalOpen(true)}
-                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 text-sm font-medium rounded-lg hover:bg-rose-100 transition-colors border border-rose-200"
-                                >
-                                    <Trash2 size={16} /> <span>Eliminar Borrador</span>
-                                </button>
+                        <div className="flex items-center gap-4">
+                            {!isEditMode && (
+                                <>
+                                    <input
+                                        ref={fileInputRefExport}
+                                        type="file"
+                                        accept=".xlsx,.xlsm"
+                                        onChange={handleImportExcel}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRefExport.current?.click()}
+                                        disabled={isImporting}
+                                        className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-100 transition-all flex items-center gap-3 border border-emerald-100 disabled:opacity-50"
+                                    >
+                                        {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                        <span>Importar Excel</span>
+                                    </button>
+                                </>
                             )}
+                            <button
+                                type="button"
+                                onClick={() => setIsDeleteModalOpen(true)}
+                                className="p-4 bg-slate-50 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-50 hover:text-red-500 transition-all flex items-center gap-3 border border-slate-100"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                <span>Limpiar</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleClose}
+                                className="p-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl shadow-slate-900/10 flex items-center gap-3"
+                            >
+                                <X className="h-4 w-4" />
+                                <span>Cerrar</span>
+                            </button>
                         </div>
                     </div>
 

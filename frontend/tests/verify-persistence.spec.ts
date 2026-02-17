@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Persistencia del Formulario de Recepción', () => {
   // Ajustar la URL según el entorno local
-  const BASE_URL = 'http://localhost:5173/migration/nueva-recepcion';
+  const BASE_URL = 'http://localhost:3000/migration/nueva-recepcion';
 
   test('Debe persistir los datos del formulario tras una recarga', async ({ page }) => {
     // 1. Navegar al formulario de nueva recepción
