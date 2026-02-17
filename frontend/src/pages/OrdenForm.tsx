@@ -20,7 +20,8 @@ import {
     Check,
     CheckCircle2,
     XCircle,
-    Loader2
+    Loader2,
+    ChevronLeft
 } from 'lucide-react';
 import { recepcionApi } from '../services/recepcionApi';
 import { useFormPersist } from '../hooks/use-form-persist';
@@ -668,36 +669,31 @@ export default function OrdenForm() {
             {/* Soft Header */}
             <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm px-6 py-4">
                 <div className="max-w-5xl mx-auto">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-xl font-black text-[#003366] uppercase tracking-tight flex items-center gap-4">
-                                Recepción de Muestra Cilíndricas de Concreto
-                                {hasSavedData && (
-                                    <div className="flex items-center animate-in fade-in duration-300 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                                        <span className="text-[10px] text-amber-700 mr-2 font-medium tracking-normal normal-case">Borrador guardado</span>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                setIsDeleteModalOpen(true);
-                                            }}
-                                            className="p-1 text-amber-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                                            title="Descartar borrador y limpiar formulario"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                )}
-                            </h1>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div className="flex items-center gap-4">
+                            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                <ChevronLeft size={24} />
+                            </button>
+                            <div>
+                                <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+                                    {isEditMode ? 'Editar Recepción' : 'Recepción de Muestras Cilíndricas'}
+                                </h1>
+                                <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                                    {isEditMode ? <span>ID: <span className="font-mono text-gray-700">#{id}</span></span> : 'Registro de nuevas muestras'}
+                                </p>
+                            </div>
                         </div>
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
-                        >
-                            <X className="h-4 w-4" /> <span>Cancelar</span>
-                        </button>
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                            {hasSavedData && !isEditMode && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDeleteModalOpen(true)}
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 text-sm font-medium rounded-lg hover:bg-rose-100 transition-colors border border-rose-200"
+                                >
+                                    <Trash2 size={16} /> <span>Eliminar Borrador</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Metadata Row */}
