@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient, useQuery } from 'react-query';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -289,6 +289,7 @@ export default function OrdenForm() {
     const [clienteSearch, setClienteSearch] = useState('');
     const [clientes, setClientes] = useState<any[]>([]);
     const [showClienteDropdown, setShowClienteDropdown] = useState(false);
+    const isSelectionRef = useRef(false);
 
     // --- TEMPLATES LOGIC ---
     const [templateSearch, setTemplateSearch] = useState('');
@@ -330,6 +331,7 @@ export default function OrdenForm() {
         setValue('entregado_por', t.persona_contacto || '', { shouldValidate: true });
 
         setTemplateSearch(t.nombre_plantilla);
+        isSelectionRef.current = true;
         setClienteSearch(t.cliente);
         setShowTemplateDropdown(false);
         toast.success(`Plantilla "${t.nombre_plantilla}" cargada`);
@@ -365,6 +367,11 @@ export default function OrdenForm() {
 
     // Debounced client search
     useEffect(() => {
+        if (isSelectionRef.current) {
+            isSelectionRef.current = false;
+            return;
+        }
+        
         const timer = setTimeout(async () => {
             if (clienteSearch.length >= 2) {
                 try {
@@ -401,6 +408,7 @@ export default function OrdenForm() {
         // Entregado por: Link to contact person
         setValue('entregado_por', fallback(c.contacto), { shouldValidate: true });
 
+        isSelectionRef.current = true;
         setClienteSearch(c.nombre);
         setShowClienteDropdown(false);
         toast.success(`Cliente ${c.nombre} seleccionado`);
@@ -490,6 +498,7 @@ export default function OrdenForm() {
             reset(existingOrden as any);
             // Also sync search field
             if (existingOrden.cliente) {
+                isSelectionRef.current = true;
                 setClienteSearch(existingOrden.cliente);
             }
         }
@@ -851,6 +860,8 @@ export default function OrdenForm() {
                                                 
                                                 // Auto-fill Client Data
                                                 setValue('cliente', q.cliente || '', { shouldValidate: true });
+                                                isSelectionRef.current = true;
+                                                setClienteSearch(q.cliente || '');
                                                 setValue('ruc', q.ruc || '', { shouldValidate: true });
                                                 setValue('persona_contacto', q.contacto || '', { shouldValidate: true });
                                                 setValue('email', q.email || '', { shouldValidate: true });
