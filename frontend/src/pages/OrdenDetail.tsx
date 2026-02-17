@@ -183,7 +183,7 @@ export default function OrdenDetail() {
                                             <th className="px-4 py-4">Estructura</th>
                                             <th className="px-4 py-4 text-center">F'c</th>
                                             <th className="px-4 py-4 text-center">Fecha Moldeo</th>
-                                            <th className="px-4 py-4 text-center">Hora</th>
+                                            <th className="px-4 py-4 text-center">Hora Moldeo</th>
                                             <th className="px-4 py-4 text-center">Edad</th>
                                             <th className="px-4 py-4 text-center">Fecha Rotura</th>
                                             <th className="px-4 py-4 text-center">Densidad</th>

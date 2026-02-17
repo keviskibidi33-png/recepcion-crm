@@ -922,7 +922,7 @@ export default function OrdenForm() {
                                         <th className="px-2 py-4 w-48">Estructura</th>
                                         <th className="px-2 py-4 w-16 text-center">F'c</th>
                                         <th className="px-2 py-4 w-24 text-center">Fecha moldeo</th>
-                                        <th className="px-2 py-4 w-20 text-center">Hora</th>
+                                        <th className="px-2 py-4 w-20 text-center">Hora Moldeo</th>
                                         <th className="px-2 py-4 w-12 text-center">Edad</th>
                                         <th className="px-2 py-4 w-24 text-center">Fecha rotura</th>
                                         <th className="px-2 py-4 w-16 text-center">Densidad</th>
