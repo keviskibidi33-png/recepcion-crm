@@ -23,6 +23,7 @@ export function useFormPersist<T extends FieldValues>(
         const savedData = localStorage.getItem(formKey);
         if (savedData) {
             try {
+                console.debug(`[FormPersist] Loading saved data for key: ${formKey}`);
                 const parsed = JSON.parse(savedData);
                 setHasSavedData(true);
                 // Reset form with saved data to populate fields
@@ -39,8 +40,11 @@ export function useFormPersist<T extends FieldValues>(
         if (!enabled) return;
 
         const timeoutId = setTimeout(() => {
-            localStorage.setItem(formKey, JSON.stringify(values));
-            setHasSavedData(true);
+            if (Object.keys(values).length > 0) {
+                // console.debug(`[FormPersist] Saving data for key: ${formKey}`);
+                localStorage.setItem(formKey, JSON.stringify(values));
+                setHasSavedData(true);
+            }
         }, 1000);
 
         return () => clearTimeout(timeoutId);
