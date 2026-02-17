@@ -824,59 +824,39 @@ export default function OrdenForm() {
     return (
         <div className="h-screen overflow-y-auto bg-[#F8FAFC] pb-20 text-slate-900 font-sans antialiased">
             {/* Soft Header */}
-            <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm px-6 py-4">
+            <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm px-6 py-2">
                 <div className="max-w-5xl mx-auto">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                        <div className="flex items-center gap-6">
-                            <div className="h-16 w-16 rounded-[2rem] bg-[#0070F3] flex items-center justify-center text-white shadow-xl shadow-blue-500/20 transform -rotate-3 group-hover:rotate-0 transition-transform duration-500">
-                                <Plus className="h-8 w-8" strokeWidth={3} />
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-[#0070F3] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 transform -rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                                <Plus className="h-5 w-5" strokeWidth={3} />
                             </div>
                             <div>
-                                <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">
+                                <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">
                                     {isEditMode ? 'Editar Recepción' : 'Nueva Recepción'}
                                 </h2>
-                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1 flex items-center gap-2">
-                                    <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+                                <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.2em] mt-0.5 flex items-center gap-2">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
                                     Registro Geofal v2.0
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            {!isEditMode && (
-                                <>
-                                    <input
-                                        ref={fileInputRefExport}
-                                        type="file"
-                                        accept=".xlsx,.xlsm"
-                                        onChange={handleImportExcel}
-                                        className="hidden"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRefExport.current?.click()}
-                                        disabled={isImporting}
-                                        className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-100 transition-all flex items-center gap-3 border border-emerald-100 disabled:opacity-50"
-                                    >
-                                        {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                                        <span>Importar Excel</span>
-                                    </button>
-                                </>
-                            )}
+                        <div className="flex items-center gap-3">
                             <button
                                 type="button"
                                 onClick={() => setIsDeleteModalOpen(true)}
-                                className="p-4 bg-slate-50 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-50 hover:text-red-500 transition-all flex items-center gap-3 border border-slate-100"
+                                className="px-4 py-2 bg-slate-50 text-slate-400 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-red-50 hover:text-red-500 transition-all flex items-center gap-2 border border-slate-100"
                             >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                                 <span>Limpiar</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={handleClose}
-                                className="p-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl shadow-slate-900/10 flex items-center gap-3"
+                                className="px-4 py-2 bg-slate-900 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-900/10 flex items-center gap-2"
                             >
-                                <X className="h-4 w-4" />
+                                <X className="h-3.5 w-3.5" />
                                 <span>Cerrar</span>
                             </button>
                         </div>
@@ -1515,10 +1495,10 @@ export default function OrdenForm() {
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="flex items-center gap-2 px-10 py-3 bg-[#0070F3] text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50"
+                            className="flex items-center gap-2 px-8 py-2.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all shadow-lg shadow-slate-900/10 disabled:opacity-50"
                         >
-                            <Save className="h-4 w-4" />
-                            {isSubmitting ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Crear Recepción de Muestra')}
+                            <Save className="h-3.5 w-3.5" />
+                            {isSubmitting ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Crear Recepción')}
                         </button>
                     </div>
                 </form >
