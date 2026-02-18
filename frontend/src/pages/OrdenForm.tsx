@@ -47,16 +47,22 @@ const sampleSchema = z.object({
     codigo_muestra_lem: z.string().optional(),
     identificacion_muestra: z.string().min(1, "Identificación Requerida"),
     estructura: z.string().min(1, "Estructura Requerida"),
-    fc_kg_cm2: z.union([z.number(), z.string()]).refine(
-        (val) => Number(val) > 0,
-        { message: "F'c Requerido (mayor a 0)" }
-    ).transform((val) => Number(val)),
+    fc_kg_cm2: z.preprocess(
+        (val) => (val === null || val === undefined ? '' : val),
+        z.union([z.number(), z.string()]).refine(
+            (val) => Number(val) > 0,
+            { message: "F'c Requerido (mayor a 0)" }
+        ).transform((val) => Number(val))
+    ),
     fecha_moldeo: z.string().min(1, "Fecha de moldeo Requerida").regex(/^\d{2}\/\d{2}\/\d{4}$/, "Formato DD/MM/YYYY"),
     hora_moldeo: z.string().optional(),
-    edad: z.union([z.number(), z.string()]).refine(
-        (val) => Number(val) >= 1,
-        { message: "Edad Requerida (mínimo 1)" }
-    ).transform((val) => Number(val)),
+    edad: z.preprocess(
+        (val) => (val === null || val === undefined ? '' : val),
+        z.union([z.number(), z.string()]).refine(
+            (val) => Number(val) >= 1,
+            { message: "Edad Requerida (mínimo 1)" }
+        ).transform((val) => Number(val))
+    ),
     fecha_rotura: z.string().min(1, "Fecha de rotura Requerida").regex(/^\d{2}\/\d{2}\/\d{4}$/, "Formato DD/MM/YYYY"),
     requiere_densidad: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.boolean(), z.string()]).optional().transform((val) => val === true || val === "true"))
 }).superRefine((data, ctx) => {
@@ -75,7 +81,7 @@ const sampleSchema = z.object({
 const formSchema = z.object({
     numero_ot: z.string().min(1, "OT Requerida"),
     numero_recepcion: z.string().min(1, "Recepción Requerida"),
-    numero_cotizacion: z.string().optional(),
+    numero_cotizacion: z.preprocess((val) => (val === null ? undefined : val), z.string().optional()),
     cliente: z.string().min(1, "Cliente Requerido"),
     domicilio_legal: z.string().min(1, "Requerido"),
     ruc: z.string().min(8, "RUC inválido"),
@@ -88,7 +94,13 @@ const formSchema = z.object({
     proyecto: z.string().min(1, "Requerido"),
     ubicacion: z.string().min(1, "Requerido"),
     fecha_recepcion: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Fecha inválida (DD/MM/YYYY)"),
-    fecha_estimada_culminacion: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Fecha inválida (DD/MM/YYYY)"),
+    fecha_estimada_culminacion: z.preprocess(
+        (val) => (val === null || val === undefined ? '' : val),
+        z.string().refine(
+            (val) => val === '' || /^\d{2}\/\d{2}\/\d{4}$/.test(val),
+            { message: "Fecha inválida (DD/MM/YYYY)" }
+        )
+    ),
     emision_fisica: z.preprocess((val) => val === true || val === "true" || val === "on", z.boolean()),
     emision_digital: z.preprocess((val) => val === true || val === "true" || val === "on", z.boolean()),
     entregado_por: z.string().min(1, "Requerido"),

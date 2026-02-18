@@ -34,7 +34,10 @@ export function useFormPersist<T extends FieldValues>(
                         if (!m) return false;
                         const hasIdentificacion = m.identificacion_muestra && String(m.identificacion_muestra).trim() !== '';
                         const hasFechaMoldeo = m.fecha_moldeo && String(m.fecha_moldeo).trim() !== '';
-                        return hasIdentificacion || hasFechaMoldeo;
+                        const hasFc = m.fc_kg_cm2 !== undefined && m.fc_kg_cm2 !== null && String(m.fc_kg_cm2).trim() !== '';
+                        const hasEdad = m.edad !== undefined && m.edad !== null && String(m.edad).trim() !== '';
+                        // A muestra must have identification AND at least one data field to be kept
+                        return (hasIdentificacion || hasFechaMoldeo) && (hasFc || hasEdad || hasFechaMoldeo);
                     });
                     // Ensure at least one empty muestra exists for new forms
                     if (parsed.muestras.length === 0) {
@@ -71,8 +74,23 @@ export function useFormPersist<T extends FieldValues>(
 
         const timeoutId = setTimeout(() => {
             if (Object.keys(values).length > 0) {
-                // console.debug(`[FormPersist] Saving data for key: ${formKey}`);
-                localStorage.setItem(formKey, JSON.stringify(values));
+                const toSave = { ...values };
+                // Sanitize muestras before saving to prevent ghost entries
+                if (Array.isArray((toSave as any).muestras)) {
+                    (toSave as any).muestras = (toSave as any).muestras.filter((m: any) => {
+                        if (!m) return false;
+                        const hasIdentificacion = m.identificacion_muestra && String(m.identificacion_muestra).trim() !== '';
+                        const hasFechaMoldeo = m.fecha_moldeo && String(m.fecha_moldeo).trim() !== '';
+                        const hasFc = m.fc_kg_cm2 !== undefined && m.fc_kg_cm2 !== null && String(m.fc_kg_cm2).trim() !== '';
+                        const hasEdad = m.edad !== undefined && m.edad !== null && String(m.edad).trim() !== '';
+                        return (hasIdentificacion || hasFechaMoldeo) && (hasFc || hasEdad || hasFechaMoldeo);
+                    });
+                    // Keep at least one empty entry so the form isn't blank on restore
+                    if ((toSave as any).muestras.length === 0) {
+                        (toSave as any).muestras = [(values as any).muestras[0] || {}];
+                    }
+                }
+                localStorage.setItem(formKey, JSON.stringify(toSave));
                 setHasSavedData(true);
             }
         }, 1000);
