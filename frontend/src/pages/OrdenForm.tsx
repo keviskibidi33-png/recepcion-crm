@@ -676,20 +676,11 @@ export default function OrdenForm() {
             if (isEditMode) {
                 await recepcionApi.actualizar(Number(id), formattedData as any);
                 queryClient.invalidateQueries('recepciones-migration');
-                setIsSuccessModalOpen(true);
+                toast.success('¡Recepción actualizada y guardada! Descarga manual disponible desde el listado/detalle.');
+                handleClose();
             } else {
-                const newRecepcion = await recepcionApi.crear(formattedData as any);
-                toast.success('¡Recepción creada!');
-
-                // Auto-download Excel
-                if (newRecepcion.id) {
-                    try {
-                        await recepcionApi.descargarExcel(newRecepcion.id, newRecepcion.numero_ot);
-                    } catch (downloadError) {
-                        console.error("Error downloading excel after creation:", downloadError);
-                        toast.error("Recepción guardada, pero hubo un error al descargar el Excel.");
-                    }
-                }
+                await recepcionApi.crear(formattedData as any);
+                toast.success('¡Recepción creada y guardada! Descarga manual disponible desde el listado/detalle.');
 
                 queryClient.invalidateQueries('recepciones-migration');
                 handleClose();
