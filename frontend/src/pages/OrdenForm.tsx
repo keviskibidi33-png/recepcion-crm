@@ -110,28 +110,28 @@ const formSchema = z.object({
 }).superRefine((data, ctx) => {
     // Validate at least 2 of 3 contact fields are filled
     const filledCount = [
-        data.persona_contacto && data.persona_contacto.trim().length > 0,
-        data.email && data.email.trim().length > 0,
-        data.telefono && data.telefono.trim().length > 0,
+        isMeaningfulContactValue(data.persona_contacto),
+        isMeaningfulContactValue(data.email),
+        isMeaningfulContactValue(data.telefono),
     ].filter(Boolean).length;
 
     if (filledCount < 2) {
         const msg = "Complete al menos 2 de 3: Nombre contacto, Email, Teléfono";
-        if (!data.persona_contacto || data.persona_contacto.trim().length === 0) {
+        if (!isMeaningfulContactValue(data.persona_contacto)) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg, path: ['persona_contacto'] });
         }
-        if (!data.email || data.email.trim().length === 0) {
+        if (!isMeaningfulContactValue(data.email)) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg, path: ['email'] });
         }
-        if (!data.telefono || data.telefono.trim().length === 0) {
+        if (!isMeaningfulContactValue(data.telefono)) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg, path: ['telefono'] });
         }
     }
 
     // If email IS provided, validate each entry as a separate email (split by newline, space, comma, semicolon)
-    if (data.email && data.email.trim().length > 0) {
+    if (isMeaningfulContactValue(data.email)) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const lines = data.email.split(/[\n\r\s,;]+/).map(l => l.trim()).filter(l => l.length > 0);
+        const lines = String(data.email).split(/[\n\r\s,;]+/).map(l => l.trim()).filter(l => l.length > 0);
         const invalid = lines.filter(l => !emailRegex.test(l));
         if (invalid.length > 0) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Email inválido: ${invalid[0]}`, path: ['email'] });
@@ -139,7 +139,7 @@ const formSchema = z.object({
     }
 
     // If telefono IS provided, validate min length
-    if (data.telefono && data.telefono.trim().length > 0 && data.telefono.trim().length < 7) {
+    if (isMeaningfulContactValue(data.telefono) && String(data.telefono).trim().length < 7) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Teléfono inválido (mín. 7 dígitos)", path: ['telefono'] });
     }
 });
@@ -149,6 +149,66 @@ type FormInput = z.input<typeof formSchema>;
 
 const DEFAULT_FC = 280;
 const DEFAULT_EDAD = 7;
+const CONTACT_PLACEHOLDERS = new Set(['-', '/', '--', 'N/A', 'NA', 'S/N', 'SIN ESPECIFICAR', 'NO APLICA']);
+
+const normalizeImportedText = (value: unknown): string => {
+    if (value === null || value === undefined) return '';
+    const text = String(value).trim();
+    if (!text) return '';
+    return CONTACT_PLACEHOLDERS.has(text.toUpperCase()) ? '' : text;
+};
+
+const isMeaningfulContactValue = (value: unknown): boolean => {
+    const normalized = normalizeImportedText(value);
+    return normalized.length > 0;
+};
+
+const hasMeaningfulMuestraData = (m: any): boolean => {
+    if (!m || typeof m !== 'object') return false;
+    const textFields = [
+        m.codigo_muestra_lem,
+        m.identificacion_muestra,
+        m.descripcion,
+        m.estructura,
+        m.fecha_moldeo,
+        m.fecha_rotura
+    ];
+    const hasText = textFields.some((v) => normalizeImportedText(v).length > 0);
+    const hasNumeric = [m.fc_kg_cm2, m.edad].some((v) => v !== null && v !== undefined && String(v).trim() !== '' && Number(v) > 0);
+    return hasText || hasNumeric;
+};
+
+const sanitizeImportedMuestras = (muestras: any[] | undefined | null) => {
+    if (!Array.isArray(muestras)) return [];
+
+    const sanitized = muestras
+        .filter((m) => hasMeaningfulMuestraData(m))
+        .map((m, idx) => ({
+            item_numero: idx + 1,
+            codigo_muestra_lem: normalizeImportedText(m.codigo_muestra_lem),
+            identificacion_muestra: normalizeImportedText(m.identificacion_muestra || m.descripcion),
+            estructura: normalizeImportedText(m.estructura),
+            fc_kg_cm2: (m.fc_kg_cm2 !== null && m.fc_kg_cm2 !== undefined && String(m.fc_kg_cm2).trim() !== '') ? m.fc_kg_cm2 : (DEFAULT_FC as any),
+            edad: (m.edad !== null && m.edad !== undefined && String(m.edad).trim() !== '') ? m.edad : (DEFAULT_EDAD as any),
+            requiere_densidad: m.requiere_densidad === true || m.requiere_densidad === 'true' || String(m.requiere_densidad || '').trim().toUpperCase() === 'SI',
+            fecha_moldeo: normalizeImportedText(m.fecha_moldeo),
+            hora_moldeo: normalizeImportedText(m.hora_moldeo),
+            fecha_rotura: normalizeImportedText(m.fecha_rotura),
+        }));
+
+    return sanitized.length > 0 ? sanitized : [{
+        item_numero: 1,
+        codigo_muestra_lem: '',
+        identificacion_muestra: '',
+        estructura: '',
+        fc_kg_cm2: '' as any,
+        edad: '' as any,
+        requiere_densidad: false,
+        fecha_moldeo: '',
+        hora_moldeo: '',
+        fecha_rotura: '',
+    }];
+};
 
 // Helpers
 const incrementString = (str: string | undefined) => {
@@ -219,7 +279,11 @@ export default function OrdenForm() {
         }
     });
 
-    const { register, control, handleSubmit, setValue, watch, reset, getValues, formState: { errors } } = form;
+    const { register, control, handleSubmit, setValue, watch, reset, formState: { errors } } = form;
+    const { fields, append, remove, replace } = useFieldArray({
+        control,
+        name: 'muestras'
+    });
 
     // Helper to handle closing/return
     const handleClose = () => {
@@ -250,39 +314,27 @@ export default function OrdenForm() {
             console.debug('[OrdenForm] Pre-filling from imported Excel:', d);
 
             // Pre-fill header fields
-            if (d.cliente) setValue('cliente', d.cliente);
-            if (d.ruc) setValue('ruc', d.ruc);
-            if (d.persona_contacto) setValue('persona_contacto', d.persona_contacto);
-            if (d.telefono) setValue('telefono', d.telefono);
-            if (d.email) setValue('email', d.email);
-            if (d.proyecto) setValue('proyecto', d.proyecto);
-            if (d.ubicacion) setValue('ubicacion', d.ubicacion);
-            if (d.solicitante) setValue('solicitante', d.solicitante);
-            if (d.domicilio_solicitante) setValue('domicilio_solicitante', d.domicilio_solicitante);
-            if (d.domicilio_legal) setValue('domicilio_legal', d.domicilio_legal || d.ubicacion || '');
+            if (d.cliente) setValue('cliente', normalizeImportedText(d.cliente));
+            if (d.ruc) setValue('ruc', normalizeImportedText(d.ruc));
+            if (d.persona_contacto) setValue('persona_contacto', normalizeImportedText(d.persona_contacto));
+            if (d.telefono) setValue('telefono', normalizeImportedText(d.telefono));
+            if (d.email) setValue('email', normalizeImportedText(d.email));
+            if (d.proyecto) setValue('proyecto', normalizeImportedText(d.proyecto));
+            if (d.ubicacion) setValue('ubicacion', normalizeImportedText(d.ubicacion));
+            if (d.solicitante) setValue('solicitante', normalizeImportedText(d.solicitante));
+            if (d.domicilio_solicitante) setValue('domicilio_solicitante', normalizeImportedText(d.domicilio_solicitante));
+            if (d.domicilio_legal) setValue('domicilio_legal', normalizeImportedText(d.domicilio_legal || d.ubicacion || ''));
 
             // Pre-fill muestras array
             if (Array.isArray(d.muestras) && d.muestras.length > 0) {
-                const formattedMuestras = d.muestras.map((m: any, idx: number) => ({
-                    item_numero: idx + 1,
-                    codigo_muestra_lem: m.codigo_muestra_lem || '',
-                    identificacion_muestra: m.identificacion_muestra || '',
-                    estructura: m.estructura || '',
-                    fc_kg_cm2: m.fc_kg_cm2 || '' as any,
-                    edad: m.edad || '' as any,
-                    fecha_moldeo: m.fecha_moldeo || '',
-                    hora_moldeo: m.hora_moldeo || '',
-                    fecha_rotura: m.fecha_rotura || '',
-                    requiere_densidad: m.requiere_densidad || false,
-                }));
-                setValue('muestras', formattedMuestras);
+                replace(sanitizeImportedMuestras(d.muestras) as any);
             }
 
             // Clear navigation state to prevent re-fill on re-render
             window.history.replaceState({}, document.title);
             toast.success(`Datos importados: ${d.muestras?.length || 0} muestras cargadas al formulario`);
         }
-    }, [location.state, isEditMode, setValue, reset, getValues]);
+    }, [location.state, isEditMode, setValue, replace]);
 
     const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -302,32 +354,20 @@ export default function OrdenForm() {
             toast.success(`Excel importado: ${data.muestras?.length || 0} muestras detectadas`);
             
             // Pre-fill header
-            if (data.cliente) setValue('cliente', data.cliente);
-            if (data.ruc) setValue('ruc', data.ruc);
-            if (data.proyecto) setValue('proyecto', data.proyecto);
-            if (data.ubicacion) setValue('ubicacion', data.ubicacion);
-            if (data.solicitante) setValue('solicitante', data.solicitante);
-            if (data.domicilio_solicitante) setValue('domicilio_solicitante', data.domicilio_solicitante);
-            if (data.domicilio_legal) setValue('domicilio_legal', data.domicilio_legal || data.ubicacion || '');
-            if (data.persona_contacto) setValue('persona_contacto', data.persona_contacto);
-            if (data.telefono) setValue('telefono', data.telefono);
-            if (data.email) setValue('email', data.email);
+            if (data.cliente) setValue('cliente', normalizeImportedText(data.cliente));
+            if (data.ruc) setValue('ruc', normalizeImportedText(data.ruc));
+            if (data.proyecto) setValue('proyecto', normalizeImportedText(data.proyecto));
+            if (data.ubicacion) setValue('ubicacion', normalizeImportedText(data.ubicacion));
+            if (data.solicitante) setValue('solicitante', normalizeImportedText(data.solicitante));
+            if (data.domicilio_solicitante) setValue('domicilio_solicitante', normalizeImportedText(data.domicilio_solicitante));
+            if (data.domicilio_legal) setValue('domicilio_legal', normalizeImportedText(data.domicilio_legal || data.ubicacion || ''));
+            if (data.persona_contacto) setValue('persona_contacto', normalizeImportedText(data.persona_contacto));
+            if (data.telefono) setValue('telefono', normalizeImportedText(data.telefono));
+            if (data.email) setValue('email', normalizeImportedText(data.email));
 
             // Pre-fill muestras
             if (Array.isArray(data.muestras) && data.muestras.length > 0) {
-                const formattedMuestras = data.muestras.map((m: any, idx: number) => ({
-                    item_numero: idx + 1,
-                    codigo_muestra_lem: m.codigo_muestra_lem || '',
-                    identificacion_muestra: m.identificacion_muestra || '',
-                    estructura: m.estructura || '',
-                    fc_kg_cm2: m.fc_kg_cm2 || '' as any,
-                    edad: m.edad || '' as any,
-                    fecha_moldeo: m.fecha_moldeo || '',
-                    hora_moldeo: m.hora_moldeo || '',
-                    fecha_rotura: m.fecha_rotura || '',
-                    requiere_densidad: !!m.requiere_densidad
-                }));
-                reset({ ...getValues(), muestras: formattedMuestras });
+                replace(sanitizeImportedMuestras(data.muestras) as any);
             }
         } catch (error: any) {
             toast.dismiss(loadingToast);
@@ -346,32 +386,20 @@ export default function OrdenForm() {
                 console.debug('[OrdenForm] Received IMPORT_DATA from parent:', d);
                 
                 // Pre-fill header
-                if (d.cliente) setValue('cliente', d.cliente);
-                if (d.ruc) setValue('ruc', d.ruc);
-                if (d.proyecto) setValue('proyecto', d.proyecto);
-                if (d.ubicacion) setValue('ubicacion', d.ubicacion);
-                if (d.solicitante) setValue('solicitante', d.solicitante);
-                if (d.domicilio_solicitante) setValue('domicilio_solicitante', d.domicilio_solicitante);
-                if (d.domicilio_legal) setValue('domicilio_legal', d.domicilio_legal || d.ubicacion || '');
-                if (d.persona_contacto) setValue('persona_contacto', d.persona_contacto);
-                if (d.telefono) setValue('telefono', d.telefono);
-                if (d.email) setValue('email', d.email);
+                if (d.cliente) setValue('cliente', normalizeImportedText(d.cliente));
+                if (d.ruc) setValue('ruc', normalizeImportedText(d.ruc));
+                if (d.proyecto) setValue('proyecto', normalizeImportedText(d.proyecto));
+                if (d.ubicacion) setValue('ubicacion', normalizeImportedText(d.ubicacion));
+                if (d.solicitante) setValue('solicitante', normalizeImportedText(d.solicitante));
+                if (d.domicilio_solicitante) setValue('domicilio_solicitante', normalizeImportedText(d.domicilio_solicitante));
+                if (d.domicilio_legal) setValue('domicilio_legal', normalizeImportedText(d.domicilio_legal || d.ubicacion || ''));
+                if (d.persona_contacto) setValue('persona_contacto', normalizeImportedText(d.persona_contacto));
+                if (d.telefono) setValue('telefono', normalizeImportedText(d.telefono));
+                if (d.email) setValue('email', normalizeImportedText(d.email));
 
                 // Pre-fill muestras
                 if (Array.isArray(d.muestras) && d.muestras.length > 0) {
-                    const formattedMuestras = d.muestras.map((m: any, idx: number) => ({
-                        item_numero: idx + 1,
-                        codigo_muestra_lem: m.codigo_muestra_lem || '',
-                        identificacion_muestra: m.identificacion_muestra || '',
-                        estructura: m.estructura || '',
-                        fc_kg_cm2: m.fc_kg_cm2 || '' as any,
-                        edad: m.edad || '' as any,
-                        fecha_moldeo: m.fecha_moldeo || '',
-                        hora_moldeo: m.hora_moldeo || '',
-                        fecha_rotura: m.fecha_rotura || '',
-                        requiere_densidad: !!m.requiere_densidad
-                    }));
-                    reset({ ...getValues(), muestras: formattedMuestras });
+                    replace(sanitizeImportedMuestras(d.muestras) as any);
                 }
                 toast.success(`Datos importados desde Excel: ${d.muestras?.length || 0} muestras cargadas`);
             }
@@ -379,7 +407,7 @@ export default function OrdenForm() {
 
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
-    }, [isEditMode, setValue, reset, getValues]);
+    }, [isEditMode, setValue, replace]);
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -435,11 +463,6 @@ export default function OrdenForm() {
         reset
     }), [watch, setValue, reset]);
 
-    const { fields, append, remove, insert } = useFieldArray({
-        control,
-        name: 'muestras'
-    });
-
     // Local Storage Persistence
     const { clearSavedData, hasSavedData } = useFormPersist(`recepcion-form-${id || 'new'}`, formMethodsMemo as any, !id); // Enabled only if creating new
 
@@ -476,16 +499,16 @@ export default function OrdenForm() {
         setValue('cliente', t.cliente, { shouldValidate: true });
         setValue('ruc', t.ruc, { shouldValidate: true });
         setValue('domicilio_legal', t.domicilio_legal, { shouldValidate: true });
-        setValue('persona_contacto', t.persona_contacto || '', { shouldValidate: true });
-        setValue('email', t.email || '', { shouldValidate: true });
-        setValue('telefono', t.telefono || '', { shouldValidate: true });
+        setValue('persona_contacto', normalizeImportedText(t.persona_contacto), { shouldValidate: true });
+        setValue('email', normalizeImportedText(t.email), { shouldValidate: true });
+        setValue('telefono', normalizeImportedText(t.telefono), { shouldValidate: true });
         setValue('solicitante', t.solicitante, { shouldValidate: true });
         setValue('domicilio_solicitante', t.domicilio_solicitante, { shouldValidate: true });
         setValue('proyecto', t.proyecto, { shouldValidate: true });
         setValue('ubicacion', t.ubicacion, { shouldValidate: true });
 
         // Logistics
-        setValue('entregado_por', t.persona_contacto || '', { shouldValidate: true });
+        setValue('entregado_por', normalizeImportedText(t.persona_contacto), { shouldValidate: true });
 
         setTemplateSearch(t.nombre_plantilla);
         isSelectionRef.current = true;
@@ -554,16 +577,16 @@ export default function OrdenForm() {
         setValue('cliente', fallback(c.nombre), { shouldValidate: true });
         setValue('ruc', fallback(c.ruc), { shouldValidate: true });
         setValue('domicilio_legal', fallback(c.direccion), { shouldValidate: true });
-        setValue('persona_contacto', fallback(c.contacto), { shouldValidate: true });
-        setValue('email', fallback(c.email), { shouldValidate: true });
-        setValue('telefono', fallback(c.telefono), { shouldValidate: true });
+        setValue('persona_contacto', normalizeImportedText(c.contacto), { shouldValidate: true });
+        setValue('email', normalizeImportedText(c.email), { shouldValidate: true });
+        setValue('telefono', normalizeImportedText(c.telefono), { shouldValidate: true });
 
         // Fill Solicitante (usually the same as client initially)
         setValue('solicitante', fallback(c.nombre), { shouldValidate: true });
         setValue('domicilio_solicitante', fallback(c.direccion), { shouldValidate: true });
 
         // Entregado por: Link to contact person
-        setValue('entregado_por', fallback(c.contacto), { shouldValidate: true });
+        setValue('entregado_por', normalizeImportedText(c.contacto), { shouldValidate: true });
 
         isSelectionRef.current = true;
         setClienteSearch(c.nombre);
@@ -1024,33 +1047,33 @@ export default function OrdenForm() {
                                                 toast.success(`Cotización encontrada: ${q.cliente}`);
                                                 
                                                 // Auto-fill Client Data
-                                                setValue('cliente', q.cliente || '', { shouldValidate: true });
+                                                setValue('cliente', normalizeImportedText(q.cliente), { shouldValidate: true });
                                                 isSelectionRef.current = true;
-                                                setClienteSearch(q.cliente || '');
-                                                setValue('ruc', q.ruc || '', { shouldValidate: true });
-                                                setValue('persona_contacto', q.contacto || '', { shouldValidate: true });
-                                                setValue('email', q.email || '', { shouldValidate: true });
-                                                setValue('telefono', q.telefono || '', { shouldValidate: true });
-                                                setValue('proyecto', q.proyecto || '', { shouldValidate: true });
-                                                setValue('ubicacion', q.ubicacion || '', { shouldValidate: true });
+                                                setClienteSearch(normalizeImportedText(q.cliente));
+                                                setValue('ruc', normalizeImportedText(q.ruc), { shouldValidate: true });
+                                                setValue('persona_contacto', normalizeImportedText(q.contacto), { shouldValidate: true });
+                                                setValue('email', normalizeImportedText(q.email), { shouldValidate: true });
+                                                setValue('telefono', normalizeImportedText(q.telefono), { shouldValidate: true });
+                                                setValue('proyecto', normalizeImportedText(q.proyecto), { shouldValidate: true });
+                                                setValue('ubicacion', normalizeImportedText(q.ubicacion), { shouldValidate: true });
 
                                                 // Auto-fill Samples (Items)
                                                 if (q.items_json && Array.isArray(q.items_json)) {
-                                                    const newMuestras = q.items_json.map((item: any, idx: number) => ({
+                                                    const newMuestras = sanitizeImportedMuestras(q.items_json.map((item: any, idx: number) => ({
                                                         item_numero: idx + 1,
                                                         identificacion_muestra: item.descripcion || `Muestra ${idx + 1}`,
                                                         estructura: '', // Manual fill usually
-                                                        fc_kg_cm2: 280, // Default
-                                                        edad: 7,      // Default
+                                                        fc_kg_cm2: DEFAULT_FC,
+                                                        edad: DEFAULT_EDAD,
                                                         requiere_densidad: false,
                                                         fecha_moldeo: '',
                                                         hora_moldeo: '',
                                                         fecha_rotura: '',
                                                         codigo_muestra_lem: '' // Will be auto-generated
-                                                    }));
+                                                    })));
                                                     
                                                     // Replace current fields
-                                                    setValue('muestras', newMuestras);
+                                                    replace(newMuestras as any);
                                                     toast.success(`${newMuestras.length} items importados de la cotización`);
                                                 }
                                             }
