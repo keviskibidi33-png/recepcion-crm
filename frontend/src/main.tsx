@@ -15,6 +15,17 @@ const CRM_LOGIN_URL = import.meta.env.VITE_CRM_LOGIN_URL || 'http://localhost:30
 const AccessGate = ({ children }: { children: React.ReactNode }) => {
     const [searchParams] = useSearchParams();
     const [isAuthorized, setIsAuthorized] = React.useState<boolean | null>(null);
+    const isEmbedded = window.parent !== window;
+
+    const notifyParentReady = React.useCallback(() => {
+        if (!isEmbedded) return;
+        window.parent.postMessage({
+            type: 'IFRAME_READY',
+            module: 'recepcion',
+            path: window.location.pathname,
+            timestamp: Date.now(),
+        }, '*');
+    }, [isEmbedded]);
 
     React.useEffect(() => {
         const tokenFromUrl = searchParams.get('token');
@@ -23,10 +34,29 @@ const AccessGate = ({ children }: { children: React.ReactNode }) => {
         }
 
         const token = tokenFromUrl || localStorage.getItem('token');
-        const isEmbedded = window.parent !== window;
         const authorized = !!tokenFromUrl || (isEmbedded && !!token);
         setIsAuthorized(authorized);
     }, [searchParams]);
+
+    React.useEffect(() => {
+        notifyParentReady();
+
+        const delayedReady = window.setTimeout(() => {
+            notifyParentReady();
+        }, 350);
+
+        const onMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'PING_IFRAME_READY') {
+                notifyParentReady();
+            }
+        };
+        window.addEventListener('message', onMessage);
+
+        return () => {
+            clearTimeout(delayedReady);
+            window.removeEventListener('message', onMessage);
+        };
+    }, [notifyParentReady]);
 
     if (isAuthorized === null) return null;
 
