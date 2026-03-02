@@ -279,7 +279,7 @@ export default function OrdenForm() {
         }
     });
 
-    const { register, control, handleSubmit, setValue, watch, reset, formState: { errors } } = form;
+    const { register, control, handleSubmit, setValue, watch, reset, getValues, formState: { errors } } = form;
     const { fields, append, remove, replace } = useFieldArray({
         control,
         name: 'muestras'
@@ -292,6 +292,16 @@ export default function OrdenForm() {
             window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*');
         } else {
             navigate('/migration');
+        }
+    };
+
+    const syncEntregadoPorFromContacto = (contacto: unknown, options?: { force?: boolean }) => {
+        const normalizedContacto = normalizeImportedText(contacto).toUpperCase();
+        if (!normalizedContacto) return;
+
+        const currentEntregado = normalizeImportedText(getValues('entregado_por'));
+        if (options?.force || !currentEntregado) {
+            setValue('entregado_por', normalizedContacto, { shouldValidate: true });
         }
     };
 
@@ -316,7 +326,11 @@ export default function OrdenForm() {
             // Pre-fill header fields
             if (d.cliente) setValue('cliente', normalizeImportedText(d.cliente));
             if (d.ruc) setValue('ruc', normalizeImportedText(d.ruc));
-            if (d.persona_contacto) setValue('persona_contacto', normalizeImportedText(d.persona_contacto));
+            if (d.persona_contacto) {
+                const personaContacto = normalizeImportedText(d.persona_contacto);
+                setValue('persona_contacto', personaContacto);
+                syncEntregadoPorFromContacto(personaContacto);
+            }
             if (d.telefono) setValue('telefono', normalizeImportedText(d.telefono));
             if (d.email) setValue('email', normalizeImportedText(d.email));
             if (d.proyecto) setValue('proyecto', normalizeImportedText(d.proyecto));
@@ -361,7 +375,11 @@ export default function OrdenForm() {
             if (data.solicitante) setValue('solicitante', normalizeImportedText(data.solicitante));
             if (data.domicilio_solicitante) setValue('domicilio_solicitante', normalizeImportedText(data.domicilio_solicitante));
             if (data.domicilio_legal) setValue('domicilio_legal', normalizeImportedText(data.domicilio_legal || data.ubicacion || ''));
-            if (data.persona_contacto) setValue('persona_contacto', normalizeImportedText(data.persona_contacto));
+            if (data.persona_contacto) {
+                const personaContacto = normalizeImportedText(data.persona_contacto);
+                setValue('persona_contacto', personaContacto);
+                syncEntregadoPorFromContacto(personaContacto);
+            }
             if (data.telefono) setValue('telefono', normalizeImportedText(data.telefono));
             if (data.email) setValue('email', normalizeImportedText(data.email));
 
@@ -393,7 +411,11 @@ export default function OrdenForm() {
                 if (d.solicitante) setValue('solicitante', normalizeImportedText(d.solicitante));
                 if (d.domicilio_solicitante) setValue('domicilio_solicitante', normalizeImportedText(d.domicilio_solicitante));
                 if (d.domicilio_legal) setValue('domicilio_legal', normalizeImportedText(d.domicilio_legal || d.ubicacion || ''));
-                if (d.persona_contacto) setValue('persona_contacto', normalizeImportedText(d.persona_contacto));
+                if (d.persona_contacto) {
+                    const personaContacto = normalizeImportedText(d.persona_contacto);
+                    setValue('persona_contacto', personaContacto);
+                    syncEntregadoPorFromContacto(personaContacto);
+                }
                 if (d.telefono) setValue('telefono', normalizeImportedText(d.telefono));
                 if (d.email) setValue('email', normalizeImportedText(d.email));
 
@@ -508,7 +530,7 @@ export default function OrdenForm() {
         setValue('ubicacion', t.ubicacion, { shouldValidate: true });
 
         // Logistics
-        setValue('entregado_por', normalizeImportedText(t.persona_contacto), { shouldValidate: true });
+        syncEntregadoPorFromContacto(t.persona_contacto, { force: true });
 
         setTemplateSearch(t.nombre_plantilla);
         isSelectionRef.current = true;
@@ -586,7 +608,7 @@ export default function OrdenForm() {
         setValue('domicilio_solicitante', fallback(c.direccion), { shouldValidate: true });
 
         // Entregado por: Link to contact person
-        setValue('entregado_por', normalizeImportedText(c.contacto), { shouldValidate: true });
+        syncEntregadoPorFromContacto(c.contacto, { force: true });
 
         isSelectionRef.current = true;
         setClienteSearch(c.nombre);
@@ -1019,6 +1041,7 @@ export default function OrdenForm() {
                                 onBlur={async (e) => {
                                     let value = e.target.value.trim().toUpperCase();
                                     if (!value) return;
+                                    const previousCotizacion = normalizeImportedText(getValues('numero_cotizacion')).toUpperCase();
 
                                     // Normailze format
                                     const fullFormat = /^\d+-COT-\d{2}$/.test(value);
@@ -1032,6 +1055,17 @@ export default function OrdenForm() {
                                     
                                     e.target.value = value;
                                     setValue('numero_cotizacion', value, { shouldValidate: true });
+
+                                    // If fields were already imported/filled and cotización didn't change,
+                                    // avoid redundant quote lookup (prevents noisy 404 on blur).
+                                    const hasImportedHeaderData = Boolean(
+                                        normalizeImportedText(getValues('cliente')) ||
+                                        normalizeImportedText(getValues('proyecto')) ||
+                                        normalizeImportedText(getValues('persona_contacto'))
+                                    );
+                                    if (hasImportedHeaderData && previousCotizacion === value) {
+                                        return;
+                                    }
 
                                     // Extract simple token: "090-COT-26" -> "090-26"
                                     const match = value.match(/^(\d+)-COT-(\d+)$/);
@@ -1052,6 +1086,7 @@ export default function OrdenForm() {
                                                 setClienteSearch(normalizeImportedText(q.cliente));
                                                 setValue('ruc', normalizeImportedText(q.ruc), { shouldValidate: true });
                                                 setValue('persona_contacto', normalizeImportedText(q.contacto), { shouldValidate: true });
+                                                syncEntregadoPorFromContacto(q.contacto);
                                                 setValue('email', normalizeImportedText(q.email), { shouldValidate: true });
                                                 setValue('telefono', normalizeImportedText(q.telefono), { shouldValidate: true });
                                                 setValue('proyecto', normalizeImportedText(q.proyecto), { shouldValidate: true });
@@ -1076,11 +1111,12 @@ export default function OrdenForm() {
                                                     replace(newMuestras as any);
                                                     toast.success(`${newMuestras.length} items importados de la cotización`);
                                                 }
+                                            } else if (res?.notFound) {
+                                                // Token does not exist in cotizaciones; keep silent to avoid noisy UX
                                             }
                                         } catch (err) {
                                             toast.dismiss();
-                                            // Silent fail or low profile warning, as quote might not exist
-                                            console.log("Quote fetch error", err);
+                                            console.warn("Quote fetch error (non-404):", err);
                                         }
                                     }
                                 }}
@@ -1380,7 +1416,7 @@ export default function OrdenForm() {
                                     onChange={(e) => {
                                         register('persona_contacto').onChange(e);
                                         // Sync to "Entregado por"
-                                        setValue('entregado_por', e.target.value.toUpperCase(), { shouldValidate: true });
+                                        syncEntregadoPorFromContacto(e.target.value, { force: true });
                                     }}
                                     error={errors.persona_contacto?.message}
                                     placeholder="ING. JUAN PEREZ"

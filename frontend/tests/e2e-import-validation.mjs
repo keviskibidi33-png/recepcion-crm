@@ -94,7 +94,7 @@ async function main() {
       proyecto: 'PROYECTO E2E',
       ubicacion: 'LIMA',
       fecha_recepcion: '02/03/2026',
-      entregado_por: 'TECNICO TEST',
+      entregado_por: '',
       recibido_por: 'ASISTENTE TEST',
       muestras: [
         {
@@ -181,9 +181,11 @@ async function main() {
     await page.waitForTimeout(800);
 
     const emailValue = await page.locator('textarea[name="email"]').inputValue();
+    const entregadoValue = await page.locator('input[name="entregado_por"]').inputValue();
     const sampleRows = await page.locator('tbody tr').count();
 
     assert(emailValue === '', `Expected sanitized email to be empty, got: "${emailValue}"`);
+    assert(entregadoValue === 'ING TEST', `Expected entregado_por auto-sync from persona_contacto, got: "${entregadoValue}"`);
     assert(sampleRows === 1, `Expected only 1 sanitized muestra row, got: ${sampleRows}`);
 
     await page.fill('input[name="numero_ot"]', 'OT-999-26');
@@ -198,7 +200,6 @@ async function main() {
     await page.fill('input[name="proyecto"]', 'PROYECTO E2E');
     await page.fill('textarea[name="ubicacion"]', 'LIMA');
     await page.fill('input[name="fecha_recepcion"]', '02/03/2026');
-    await page.fill('input[name="entregado_por"]', 'TECNICO TEST');
     await page.fill('input[name="recibido_por"]', 'ASISTENTE TEST');
 
     await page.fill('textarea[name="muestras.0.identificacion_muestra"]', 'MUESTRA VALIDA');
@@ -217,6 +218,7 @@ async function main() {
 
     assert(!!createdPayload, 'Create request was not sent');
     assert(createdPayload.email === '', `Expected submitted email to be empty, got: "${createdPayload.email}"`);
+    assert(createdPayload.entregado_por === 'ING TEST', `Expected submitted entregado_por to sync from persona_contacto, got: "${createdPayload.entregado_por}"`);
     assert(Array.isArray(createdPayload.muestras), 'Submitted muestras is not an array');
     assert(createdPayload.muestras.length === 1, `Expected submitted muestras length 1, got: ${createdPayload.muestras.length}`);
     assert(createdPayload.muestras[0].identificacion_muestra === 'MUESTRA VALIDA', 'Expected first muestra to remain valid');

@@ -95,7 +95,11 @@ export const recepcionApi = {
         try {
             const response = await api.get(`/api/cotizacion/by-token/${token}`);
             return response.data;
-        } catch (error) {
+        } catch (error: any) {
+            // 404 is expected when quote token does not exist; keep flow silent
+            if (error?.response?.status === 404) {
+                return { success: false, data: null, notFound: true };
+            }
             console.error("Error fetching quote by token:", error);
             throw error;
         }
