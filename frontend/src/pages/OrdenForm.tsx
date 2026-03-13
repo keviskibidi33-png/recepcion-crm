@@ -731,8 +731,28 @@ export default function OrdenForm() {
                 handleClose();
             }
         } catch (error: any) {
-            const serverMsg = error.response?.data?.message || error.message;
-            toast.error(`Error: ${serverMsg}`);
+            const status = error?.response?.status;
+            const detail = error?.response?.data?.detail || error?.response?.data?.message || error?.message || "Error inesperado";
+            const detailLower = typeof detail === "string" ? detail.toLowerCase() : "";
+
+            let tipo = "Error";
+            if (status === 409) {
+                if (detailLower.includes("número ot") || detailLower.includes("numero ot") || detailLower.includes("ot")) {
+                    tipo = "OT duplicada";
+                } else if (detailLower.includes("número de recepción") || detailLower.includes("numero de recepcion") || detailLower.includes("recepción") || detailLower.includes("recepcion")) {
+                    tipo = "Recepción duplicada";
+                } else {
+                    tipo = "Conflicto";
+                }
+            } else if (status === 400) {
+                tipo = "Datos inválidos";
+            } else if (status === 401) {
+                tipo = "Sesión expirada";
+            } else if (status === 500) {
+                tipo = "Error interno";
+            }
+
+            toast.error(`[${tipo}] ${detail}`);
         } finally {
             setIsSubmitting(false);
         }
