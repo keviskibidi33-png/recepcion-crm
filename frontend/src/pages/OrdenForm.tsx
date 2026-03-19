@@ -432,6 +432,7 @@ export default function OrdenForm() {
     }, [isEditMode, setValue, replace]);
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [sampleDeleteIndex, setSampleDeleteIndex] = useState<number | null>(null);
 
     const handleConfirmDelete = () => {
         clearSavedData();
@@ -442,6 +443,17 @@ export default function OrdenForm() {
         reset(defaultValues);
         toast.success('Borrador eliminado y formulario reiniciado');
         setIsDeleteModalOpen(false);
+    };
+
+    const handleRequestSampleDelete = (index: number) => {
+        setSampleDeleteIndex(index);
+    };
+
+    const handleConfirmSampleDelete = () => {
+        if (sampleDeleteIndex === null) return;
+        remove(sampleDeleteIndex);
+        setSampleDeleteIndex(null);
+        toast.success('Muestra eliminada del formulario');
     };
 
     const defaultValues: FormInput = {
@@ -1332,19 +1344,18 @@ export default function OrdenForm() {
                                                         >
                                                             <Copy className="h-4 w-4" />
                                                         </button>
-                                                        {!isEditMode && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    remove(index);
-                                                                }}
-                                                                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                handleRequestSampleDelete(index);
+                                                            }}
+                                                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                            title="Eliminar muestra"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1592,6 +1603,17 @@ export default function OrdenForm() {
                 onConfirm={handleConfirmDelete}
                 title="¿Eliminar borrador?"
                 message="Esta acción borrará todos los datos temporales no guardados. No se puede deshacer."
+                confirmText="Sí, eliminar"
+                cancelText="Cancelar"
+                type="danger"
+            />
+
+            <ConfirmationModal
+                isOpen={sampleDeleteIndex !== null}
+                onClose={() => setSampleDeleteIndex(null)}
+                onConfirm={handleConfirmSampleDelete}
+                title="¿Eliminar muestra?"
+                message="Esta acción quitará la muestra de la recepción actual. Deberá guardar la recepción para persistir el cambio."
                 confirmText="Sí, eliminar"
                 cancelText="Cancelar"
                 type="danger"
