@@ -7,7 +7,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=https://api.geofal.com.pe/api/ordenes
+        - VITE_API_URL=https://api.geofal.com.pe
     container_name: recepcion-frontend
     ports:
       - "3005:80"
