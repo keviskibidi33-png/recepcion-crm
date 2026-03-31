@@ -84,7 +84,7 @@ const formSchema = z.object({
     numero_cotizacion: z.preprocess((val) => (val === null ? undefined : val), z.string().optional()),
     cliente: z.string().min(1, "Cliente Requerido"),
     domicilio_legal: z.string().min(1, "Requerido"),
-    ruc: z.string().min(8, "RUC inválido"),
+    ruc: z.string().trim().regex(/^\d{8,20}$/, "RUC inválido"),
     // Contact fields: individually optional, but 2 of 3 required (validated below)
     persona_contacto: z.string().optional().default(""),
     email: z.string().optional().default(""),
@@ -146,6 +146,12 @@ const formSchema = z.object({
 
 type FormOutput = z.output<typeof formSchema>;
 type FormInput = z.input<typeof formSchema>;
+type BackendValidationIssue = {
+    loc?: Array<string | number>;
+    msg?: string;
+    type?: string;
+    ctx?: Record<string, unknown>;
+};
 
 const DEFAULT_FC = 280;
 const DEFAULT_EDAD = 7;
@@ -156,6 +162,62 @@ const normalizeImportedText = (value: unknown): string => {
     const text = String(value).trim();
     if (!text) return '';
     return CONTACT_PLACEHOLDERS.has(text.toUpperCase()) ? '' : text;
+};
+
+const normalizeRucValue = (value: unknown): string => {
+    const normalized = normalizeImportedText(value);
+    if (!normalized) return '';
+
+    const digitsOnly = normalized.replace(/\D/g, '');
+    return digitsOnly.length >= 8 && digitsOnly.length <= 20 ? digitsOnly : '';
+};
+
+const getFieldPathFromBackendIssue = (issue: BackendValidationIssue): string | null => {
+    if (!Array.isArray(issue.loc)) return null;
+
+    const path = issue.loc
+        .filter((part) => part !== 'body')
+        .map((part) => String(part));
+
+    return path.length > 0 ? path.join('.') : null;
+};
+
+const getBackendIssueMessage = (issue: BackendValidationIssue): string => {
+    const fieldPath = getFieldPathFromBackendIssue(issue);
+    const fieldName = fieldPath?.split('.').pop();
+
+    if (fieldName === 'ruc') {
+        return 'Ingresa un RUC válido de 8 a 20 dígitos.';
+    }
+
+    if (issue.type === 'string_too_long') {
+        const maxLength = typeof issue.ctx?.max_length === 'number' ? issue.ctx.max_length : null;
+        return maxLength ? `El valor excede el máximo permitido (${maxLength} caracteres).` : 'El valor es demasiado largo.';
+    }
+
+    if (issue.type === 'missing') {
+        return 'Este campo es obligatorio.';
+    }
+
+    return issue.msg || 'Valor inválido.';
+};
+
+const getFirstClientErrorPath = (errorObject: unknown, prefix = ''): string | null => {
+    if (!errorObject || typeof errorObject !== 'object') return null;
+
+    const current = errorObject as Record<string, unknown>;
+    if (typeof current.message === 'string' && prefix) {
+        return prefix;
+    }
+
+    for (const [key, value] of Object.entries(current)) {
+        if (key === 'message' || key === 'ref' || key === 'type') continue;
+        const nextPrefix = prefix ? `${prefix}.${key}` : key;
+        const nested = getFirstClientErrorPath(value, nextPrefix);
+        if (nested) return nested;
+    }
+
+    return null;
 };
 
 const isMeaningfulContactValue = (value: unknown): boolean => {
@@ -279,11 +341,48 @@ export default function OrdenForm() {
         }
     });
 
-    const { register, control, handleSubmit, setValue, watch, reset, getValues, formState: { errors } } = form;
+    const { register, control, handleSubmit, setValue, watch, reset, getValues, setError, clearErrors, setFocus, formState: { errors } } = form;
     const { fields, append, remove, replace } = useFieldArray({
         control,
         name: 'muestras'
     });
+
+    const focusFieldByPath = (fieldPath: string) => {
+        try {
+            setFocus(fieldPath as any);
+        } catch {
+            // Ignore setFocus mismatches and fallback to DOM lookup below.
+        }
+
+        requestAnimationFrame(() => {
+            const field = document.getElementsByName(fieldPath)[0] as HTMLElement | undefined;
+            if (!field) return;
+            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if ('focus' in field && typeof field.focus === 'function') {
+                field.focus();
+            }
+        });
+    };
+
+    const applyBackendValidationErrors = (issues: BackendValidationIssue[]) => {
+        const fieldIssues = issues
+            .map((issue) => ({
+                path: getFieldPathFromBackendIssue(issue),
+                message: getBackendIssueMessage(issue),
+            }))
+            .filter((issue): issue is { path: string; message: string } => Boolean(issue.path));
+
+        if (fieldIssues.length === 0) return false;
+
+        fieldIssues.forEach(({ path, message }) => {
+            setError(path as any, { type: 'server', message });
+        });
+
+        const firstIssue = fieldIssues[0];
+        focusFieldByPath(firstIssue.path);
+        toast.error(`Revisa el campo resaltado: ${firstIssue.message}`);
+        return true;
+    };
 
     // Helper to handle closing/return
     const handleClose = () => {
@@ -325,7 +424,7 @@ export default function OrdenForm() {
 
             // Pre-fill header fields
             if (d.cliente) setValue('cliente', normalizeImportedText(d.cliente));
-            if (d.ruc) setValue('ruc', normalizeImportedText(d.ruc));
+            if (d.ruc) setValue('ruc', normalizeRucValue(d.ruc));
             if (d.persona_contacto) {
                 const personaContacto = normalizeImportedText(d.persona_contacto);
                 setValue('persona_contacto', personaContacto);
@@ -369,7 +468,7 @@ export default function OrdenForm() {
             
             // Pre-fill header
             if (data.cliente) setValue('cliente', normalizeImportedText(data.cliente));
-            if (data.ruc) setValue('ruc', normalizeImportedText(data.ruc));
+            if (data.ruc) setValue('ruc', normalizeRucValue(data.ruc));
             if (data.proyecto) setValue('proyecto', normalizeImportedText(data.proyecto));
             if (data.ubicacion) setValue('ubicacion', normalizeImportedText(data.ubicacion));
             if (data.solicitante) setValue('solicitante', normalizeImportedText(data.solicitante));
@@ -405,7 +504,7 @@ export default function OrdenForm() {
                 
                 // Pre-fill header
                 if (d.cliente) setValue('cliente', normalizeImportedText(d.cliente));
-                if (d.ruc) setValue('ruc', normalizeImportedText(d.ruc));
+                if (d.ruc) setValue('ruc', normalizeRucValue(d.ruc));
                 if (d.proyecto) setValue('proyecto', normalizeImportedText(d.proyecto));
                 if (d.ubicacion) setValue('ubicacion', normalizeImportedText(d.ubicacion));
                 if (d.solicitante) setValue('solicitante', normalizeImportedText(d.solicitante));
@@ -531,7 +630,7 @@ export default function OrdenForm() {
     const handleSelectTemplate = (t: any) => {
         // Populate ALL fields
         setValue('cliente', t.cliente, { shouldValidate: true });
-        setValue('ruc', t.ruc, { shouldValidate: true });
+        setValue('ruc', normalizeRucValue(t.ruc), { shouldValidate: true });
         setValue('domicilio_legal', t.domicilio_legal, { shouldValidate: true });
         setValue('persona_contacto', normalizeImportedText(t.persona_contacto), { shouldValidate: true });
         setValue('email', normalizeImportedText(t.email), { shouldValidate: true });
@@ -609,7 +708,7 @@ export default function OrdenForm() {
 
         // Essential fields
         setValue('cliente', fallback(c.nombre), { shouldValidate: true });
-        setValue('ruc', fallback(c.ruc), { shouldValidate: true });
+        setValue('ruc', normalizeRucValue(c.ruc), { shouldValidate: true });
         setValue('domicilio_legal', fallback(c.direccion), { shouldValidate: true });
         setValue('persona_contacto', normalizeImportedText(c.contacto), { shouldValidate: true });
         setValue('email', normalizeImportedText(c.email), { shouldValidate: true });
@@ -720,6 +819,7 @@ export default function OrdenForm() {
 
     const onSubmit = async (data: FormOutput) => {
         setIsSubmitting(true);
+        clearErrors();
         try {
             // FORCE item_numero assignment here to prevent validation issues
             const formattedData = {
@@ -746,6 +846,10 @@ export default function OrdenForm() {
             const status = error?.response?.status;
             const detail = error?.response?.data?.detail || error?.response?.data?.message || error?.message || "Error inesperado";
             const detailLower = typeof detail === "string" ? detail.toLowerCase() : "";
+
+            if (status === 422 && Array.isArray(detail) && applyBackendValidationErrors(detail)) {
+                return;
+            }
 
             let tipo = "Error";
             if (status === 409) {
@@ -963,6 +1067,11 @@ export default function OrdenForm() {
                         return value;
                     }, 2));
 
+                    const firstErrorPath = getFirstClientErrorPath(errors);
+                    if (firstErrorPath) {
+                        focusFieldByPath(firstErrorPath);
+                    }
+
                     // Collect ALL errors for debug toast - improved to show field names clearly
                     const getAllErrorMessages = (errObj: any, prefix = ''): string[] => {
                         let messages: string[] = [];
@@ -983,8 +1092,7 @@ export default function OrdenForm() {
 
                     const allErrors = getAllErrorMessages(errors);
                     if (allErrors.length > 0) {
-                        // Show first 5 errors in toast for better debugging
-                        toast.error(`Errores de validación:\n${allErrors.slice(0, 5).join('\n')}${allErrors.length > 5 ? `\n... y ${allErrors.length - 5} más` : ''}`, {
+                        toast.error(`Revisa el campo resaltado en rojo. ${allErrors[0]}`, {
                             duration: 8000,
                             style: { textAlign: 'left', whiteSpace: 'pre-line' }
                         });
@@ -1116,7 +1224,7 @@ export default function OrdenForm() {
                                                 setValue('cliente', normalizeImportedText(q.cliente), { shouldValidate: true });
                                                 isSelectionRef.current = true;
                                                 setClienteSearch(normalizeImportedText(q.cliente));
-                                                setValue('ruc', normalizeImportedText(q.ruc), { shouldValidate: true });
+                                                setValue('ruc', normalizeRucValue(q.ruc), { shouldValidate: true });
                                                 setValue('persona_contacto', normalizeImportedText(q.contacto), { shouldValidate: true });
                                                 syncEntregadoPorFromContacto(q.contacto);
                                                 setValue('email', normalizeImportedText(q.email), { shouldValidate: true });
@@ -1424,6 +1532,10 @@ export default function OrdenForm() {
                             <InputField
                                 label="RUC:"
                                 {...register('ruc')}
+                                onBlur={(e) => {
+                                    register('ruc').onBlur(e);
+                                    setValue('ruc', normalizeRucValue(e.target.value), { shouldValidate: true });
+                                }}
                                 error={errors.ruc?.message}
                                 placeholder="20100123456" // Realistic RUC
                             />
