@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -31,8 +31,6 @@ export default function RecepcionModule() {
     const [deleteId, setDeleteId] = useState<number | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
     const [isImporting, setIsImporting] = useState(false)
-    const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 100
     const fileInputRef = useRef<HTMLInputElement>(null)
     const navigate = useNavigate()
     const queryClient = useQueryClient()
@@ -116,23 +114,6 @@ export default function RecepcionModule() {
 
         return currentData
     }, [ordenes, filters])
-
-    const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage))
-    const safeCurrentPage = Math.min(currentPage, totalPages)
-    const paginatedData = filteredData.slice(
-        (safeCurrentPage - 1) * itemsPerPage,
-        safeCurrentPage * itemsPerPage
-    )
-
-    useEffect(() => {
-        setCurrentPage(1)
-    }, [filters.search, filters.status])
-
-    useEffect(() => {
-        if (currentPage > totalPages) {
-            setCurrentPage(totalPages)
-        }
-    }, [currentPage, totalPages])
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] p-8 space-y-8 font-sans antialiased">
@@ -235,7 +216,7 @@ export default function RecepcionModule() {
                         <p className="text-slate-400 font-bold uppercase tracking-widest">No se encontraron registros</p>
                     </div>
                 ) : (
-                    paginatedData?.map((item) => (
+                    filteredData?.map((item) => (
                         <div
                             key={item.id}
                             className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all group"
@@ -285,37 +266,6 @@ export default function RecepcionModule() {
                     ))
                 )}
             </div>
-
-            {!isLoading && !isError && filteredData.length > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3">
-                    <span className="text-sm text-slate-500 font-medium">
-                        Mostrando {(safeCurrentPage - 1) * itemsPerPage + 1}
-                        {' - '}
-                        {Math.min(safeCurrentPage * itemsPerPage, filteredData.length)}
-                        {' de '}
-                        {filteredData.length}
-                    </span>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                            disabled={safeCurrentPage <= 1}
-                            className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-                        >
-                            Anterior
-                        </button>
-                        <span className="text-sm font-semibold text-slate-700 min-w-[96px] text-center">
-                            Página {safeCurrentPage} / {totalPages}
-                        </span>
-                        <button
-                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                            disabled={safeCurrentPage >= totalPages}
-                            className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-                        >
-                            Siguiente
-                        </button>
-                    </div>
-                </div>
-            )}
 
             {/* Delete Modal - Softened */}
             {deleteId && (
