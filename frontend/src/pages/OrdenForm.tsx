@@ -106,7 +106,20 @@ const formSchema = z.object({
     entregado_por: z.string().min(1, "Requerido"),
     recibido_por: z.string().min(1, "Requerido"),
     observaciones: z.string().optional(),
-    muestras: z.array(sampleSchema).min(1, "Mínimo una muestra")
+    muestras: z.preprocess(
+        (val) => {
+            if (!Array.isArray(val)) return val;
+            // Strip ghost/empty rows before validation:
+            // a muestra is empty if it lacks BOTH identificacion_muestra AND fecha_moldeo
+            return val.filter((m: any) => {
+                if (!m || typeof m !== 'object') return false;
+                const hasId = typeof m.identificacion_muestra === 'string' && m.identificacion_muestra.trim().length > 0;
+                const hasDate = typeof m.fecha_moldeo === 'string' && m.fecha_moldeo.trim().length > 0;
+                return hasId || hasDate;
+            });
+        },
+        z.array(sampleSchema).min(1, "Mínimo una muestra")
+    )
 }).superRefine((data, ctx) => {
     // Validate at least 2 of 3 contact fields are filled
     const filledCount = [
