@@ -170,6 +170,16 @@ const DEFAULT_FC = 280;
 const DEFAULT_EDAD = 7;
 const CONTACT_PLACEHOLDERS = new Set(['-', '/', '--', 'N/A', 'NA', 'S/N', 'SIN ESPECIFICAR', 'NO APLICA']);
 
+const normalizeLemCode = (val: string): string => {
+    if (!val) return val;
+    const cleaned = val.trim();
+    if (/^\d+$/.test(cleaned)) {
+        const year = new Date().getFullYear().toString().slice(-2);
+        return `${cleaned}-CO-${year}`;
+    }
+    return cleaned;
+};
+
 const normalizeImportedText = (value: unknown): string => {
     if (value === null || value === undefined) return '';
     const text = String(value).trim();
@@ -260,7 +270,7 @@ const sanitizeImportedMuestras = (muestras: any[] | undefined | null) => {
         .filter((m) => hasMeaningfulMuestraData(m))
         .map((m, idx) => ({
             item_numero: idx + 1,
-            codigo_muestra_lem: normalizeImportedText(m.codigo_muestra_lem),
+            codigo_muestra_lem: normalizeLemCode(normalizeImportedText(m.codigo_muestra_lem)),
             identificacion_muestra: normalizeImportedText(m.identificacion_muestra || m.descripcion),
             estructura: normalizeImportedText(m.estructura),
             fc_kg_cm2: (m.fc_kg_cm2 !== null && m.fc_kg_cm2 !== undefined && String(m.fc_kg_cm2).trim() !== '') ? m.fc_kg_cm2 : (DEFAULT_FC as any),
@@ -841,7 +851,8 @@ export default function OrdenForm() {
                 ...data,
                 muestras: data.muestras.map((m, idx) => ({
                     ...m,
-                    item_numero: idx + 1
+                    item_numero: idx + 1,
+                    codigo_muestra_lem: normalizeLemCode(m.codigo_muestra_lem || '')
                 }))
             };
 
