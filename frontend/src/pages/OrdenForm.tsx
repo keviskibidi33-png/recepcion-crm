@@ -398,11 +398,13 @@ export default function OrdenForm() {
     };
 
     // Helper to handle closing/return
-    const handleClose = () => {
+    const handleClose = (reason?: 'created' | 'updated') => {
         if (window.self !== window.top) {
-            console.log("Sending CLOSE_MODAL message to parent");
-            window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*');
+            console.log("Sending CLOSE_MODAL message to parent", reason);
+            window.parent.postMessage({ type: 'CLOSE_MODAL', reason }, '*');
         } else {
+            if (reason === 'created') toast.success('¡Recepción creada!');
+            else if (reason === 'updated') toast.success('¡Recepción actualizada!');
             navigate('/migration');
         }
     };
@@ -846,14 +848,11 @@ export default function OrdenForm() {
             if (isEditMode) {
                 await recepcionApi.actualizar(Number(id), formattedData as any);
                 queryClient.invalidateQueries('recepciones-migration');
-                toast.success('¡Recepción actualizada y guardada! Descarga manual disponible desde el listado/detalle.');
-                handleClose();
+                handleClose('updated');
             } else {
                 await recepcionApi.crear(formattedData as any);
-                toast.success('¡Recepción creada y guardada! Descarga manual disponible desde el listado/detalle.');
-
                 queryClient.invalidateQueries('recepciones-migration');
-                handleClose();
+                handleClose('created');
             }
         } catch (error: any) {
             const status = error?.response?.status;
