@@ -91,6 +91,13 @@ export const recepcionApi = {
         return response.data;
     },
 
+    buscarRecepcion: async (numeroRecepcion: string): Promise<any> => {
+        const response = await api.get('/api/recepcion/buscar-recepcion', {
+            params: { numero: numeroRecepcion },
+        });
+        return response.data;
+    },
+
     obtenerCotizacionPorToken: async (token: string): Promise<any> => {
         try {
             const response = await api.get(`/api/cotizacion/by-token/${token}`);

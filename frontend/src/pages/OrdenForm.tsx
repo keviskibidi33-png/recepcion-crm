@@ -979,34 +979,32 @@ export default function OrdenForm() {
         }
     };
 
-    // SEARCH LOGIC FOR "PREMIUM" INTERFACE
-    // SEARCH LOGIC FOR "PREMIUM" INTERFACE
+    // SEARCH LOGIC FOR RECEPCIÓN PROBETAS
+    // Importante: aquí solo debe bloquear la tabla `recepcion`.
+    // Verificación/compresión/trazabilidad pueden existir para un número restaurado
+    // y no deben marcarlo como ocupado al crear nuevamente la recepción.
     const buscarEstadoRecepcion = async (numero: string) => {
         if (!numero || numero.length < 3) return;
 
         setRecepcionStatus({ estado: 'buscando' });
 
         try {
-            const data = await recepcionApi.validarEstado(numero);
+            const data = await recepcionApi.buscarRecepcion(numero);
 
-            if (data.exists) {
-                // Backend sends lowercase statuses: 'completado', 'en_proceso', 'pendiente'
-                const recStatus = data.recepcion?.status?.toLowerCase();
-                const verStatus = data.verificacion?.status?.toLowerCase();
-                const comStatus = data.compresion?.status?.toLowerCase();
+            if (data.encontrado) {
                 setRecepcionStatus({
                     estado: 'ocupado',
-                    mensaje: `⚠️ Recepción ya registrada hace poco (Cliente: ${data.cliente || 'Desconocido'})`,
+                    mensaje: `⚠️ Recepción ya registrada en Recepción Probetas (OT: ${data.datos?.numero_ot || '-'})`,
                     formatos: {
-                        recepcion: recStatus === 'completado' || recStatus === 'en_proceso',
-                        verificacion: verStatus === 'completado',
-                        compresion: comStatus === 'completado' || comStatus === 'en_proceso'
+                        recepcion: true,
+                        verificacion: false,
+                        compresion: false
                     }
                 });
             } else {
                 setRecepcionStatus({
                     estado: 'disponible',
-                    mensaje: '✅ Numero Disponible para registro',
+                    mensaje: '✅ Número disponible en Recepción Probetas',
                     formatos: {
                         recepcion: false,
                         verificacion: false,
