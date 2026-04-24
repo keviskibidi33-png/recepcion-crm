@@ -408,13 +408,14 @@ export default function OrdenForm() {
     };
 
     // Helper to handle closing/return
-    const handleClose = (reason?: 'created' | 'updated') => {
+    const handleClose = (reason?: unknown) => {
+        const closeReason = reason === 'created' || reason === 'updated' ? reason : undefined;
         if (window.self !== window.top) {
-            console.log("Sending CLOSE_MODAL message to parent", reason);
-            window.parent.postMessage({ type: 'CLOSE_MODAL', reason }, '*');
+            console.log("Sending CLOSE_MODAL message to parent", closeReason);
+            window.parent.postMessage({ type: 'CLOSE_MODAL', reason: closeReason }, '*');
         } else {
-            if (reason === 'created') toast.success('¡Recepción creada!');
-            else if (reason === 'updated') toast.success('¡Recepción actualizada!');
+            if (closeReason === 'created') toast.success('¡Recepción creada!');
+            else if (closeReason === 'updated') toast.success('¡Recepción actualizada!');
             navigate('/migration');
         }
     };
@@ -1058,7 +1059,7 @@ export default function OrdenForm() {
                             </button>
                             <button
                                 type="button"
-                                onClick={handleClose}
+                                onClick={() => handleClose()}
                                 className="px-4 py-2 bg-slate-900 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-900/10 flex items-center gap-2"
                             >
                                 <X className="h-3.5 w-3.5" />
