@@ -34,8 +34,12 @@ const AccessGate = ({ children }: { children: React.ReactNode }) => {
         }
 
         const token = tokenFromUrl || localStorage.getItem('token');
-        const authorized = !!tokenFromUrl || (isEmbedded && !!token);
+        const authorized = !!tokenFromUrl || isEmbedded || !!token;
         setIsAuthorized(authorized);
+
+        if (isEmbedded && !token) {
+            window.parent.postMessage({ type: 'TOKEN_REFRESH_REQUEST', source: 'recepcion' }, '*');
+        }
     }, [searchParams]);
 
     React.useEffect(() => {
@@ -48,6 +52,10 @@ const AccessGate = ({ children }: { children: React.ReactNode }) => {
         const onMessage = (event: MessageEvent) => {
             if (event.data?.type === 'PING_IFRAME_READY') {
                 notifyParentReady();
+            }
+            if (event.data?.type === 'TOKEN_REFRESH' && event.data.token) {
+                localStorage.setItem('token', event.data.token);
+                setIsAuthorized(true);
             }
         };
         window.addEventListener('message', onMessage);
