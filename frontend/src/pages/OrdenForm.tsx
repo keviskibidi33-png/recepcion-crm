@@ -30,10 +30,10 @@ import { useEnterTableNavigation } from '../hooks/use-enter-table-navigation';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 
 // Validation Schema
-// Helper: check if a DD/MM/YYYY date is within N days from today
+// Helper: check if a YYYY/MM/DD date is within N days from today
 const isDateWithinDays = (dateStr: string, days: number): boolean => {
-    if (!dateStr || !/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return false;
-    const [d, m, y] = dateStr.split('/').map(Number);
+    if (!dateStr || !/^\d{4}\/\d{2}\/\d{2}$/.test(dateStr)) return false;
+    const [y, m, d] = dateStr.split('/').map(Number);
     const target = new Date(y, m - 1, d);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -54,7 +54,7 @@ const sampleSchema = z.object({
             { message: "F'c Requerido (mayor a 0)" }
         ).transform((val) => Number(val))
     ),
-    fecha_moldeo: z.string().min(1, "Fecha de moldeo Requerida").regex(/^\d{2}\/\d{2}\/\d{4}$/, "Formato DD/MM/YYYY"),
+    fecha_moldeo: z.string().min(1, "Fecha de moldeo Requerida").regex(/^\d{4}\/\d{2}\/\d{2}$/, "Formato YYYY/MM/DD"),
     hora_moldeo: z.string().optional(),
     edad: z.preprocess(
         (val) => (val === null || val === undefined ? '' : val),
@@ -63,7 +63,7 @@ const sampleSchema = z.object({
             { message: "Edad Requerida (mínimo 1)" }
         ).transform((val) => Number(val))
     ),
-    fecha_rotura: z.string().min(1, "Fecha de rotura Requerida").regex(/^\d{2}\/\d{2}\/\d{4}$/, "Formato DD/MM/YYYY"),
+    fecha_rotura: z.string().min(1, "Fecha de rotura Requerida").regex(/^\d{4}\/\d{2}\/\d{2}$/, "Formato YYYY/MM/DD"),
     requiere_densidad: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.boolean(), z.string()]).optional().transform((val) => val === true || val === "true"))
 }).superRefine((data, ctx) => {
     // hora_moldeo required only if fecha_moldeo is within 3 days of today
@@ -93,12 +93,12 @@ const formSchema = z.object({
     domicilio_solicitante: z.string().min(1, "Requerido"),
     proyecto: z.string().min(1, "Requerido"),
     ubicacion: z.string().min(1, "Requerido"),
-    fecha_recepcion: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Fecha inválida (DD/MM/YYYY)"),
+    fecha_recepcion: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, "Fecha inválida (YYYY/MM/DD)"),
     fecha_estimada_culminacion: z.preprocess(
         (val) => (val === null || val === undefined ? '' : val),
         z.string().refine(
-            (val) => val === '' || /^\d{2}\/\d{2}\/\d{4}$/.test(val),
-            { message: "Fecha inválida (DD/MM/YYYY)" }
+            (val) => val === '' || /^\d{4}\/\d{2}\/\d{2}$/.test(val),
+            { message: "Fecha inválida (YYYY/MM/DD)" }
         )
     ),
     emision_fisica: z.preprocess((val) => val === true || val === "true" || val === "on", z.boolean()),
@@ -327,7 +327,7 @@ const getFormattedDate = (date: Date = new Date()) => {
     const d = date.getDate().toString().padStart(2, '0');
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
     const y = date.getFullYear();
-    return `${d}/${m}/${y}`;
+    return `${y}/${m}/${d}`;
 };
 
 export default function OrdenForm() {
@@ -903,76 +903,75 @@ export default function OrdenForm() {
         let val = e.target.value.trim();
         if (!val) return;
 
-        // NEW LOGIC: Handle explicit slashes first (e.g. "1/1/2026" or "11/2/26")
+        // Preferred format: YYYY/MM/DD. Accept legacy inputs and normalize.
         if (val.includes('/')) {
             const parts = val.split('/');
-            // We expect at least day/month
             if (parts.length >= 2) {
-                const d = parts[0].trim().padStart(2, '0');
-                const m = parts[1].trim().padStart(2, '0');
-                let y = (parts[2] || '').trim();
-
                 const currentYear = new Date().getFullYear().toString();
+                let y = '';
+                let m = '';
+                let d = '';
 
-                if (!y) {
-                    y = currentYear;
-                } else if (y.length === 2) {
-                    y = '20' + y;
+                if (parts[0].trim().length === 4) {
+                    y = parts[0].trim();
+                    m = parts[1].trim().padStart(2, '0');
+                    d = (parts[2] || '').trim().padStart(2, '0');
+                } else {
+                    d = parts[0].trim().padStart(2, '0');
+                    m = parts[1].trim().padStart(2, '0');
+                    y = (parts[2] || '').trim();
+                    if (!y) y = currentYear;
+                    if (y.length === 2) y = `20${y}`;
                 }
 
-                // Basic validation before setting
                 if (d.length === 2 && m.length === 2 && y.length === 4) {
-                    const finalDate = `${d}/${m}/${y}`;
+                    const finalDate = `${y}/${m}/${d}`;
                     setValue(name, finalDate, { shouldValidate: true });
-                    return; // Exit if successfully handled
+                    return;
                 }
             }
         }
 
-        // Remove non-digits for analysis, but keep slashes if user typed them partially
         const digits = val.replace(/\D/g, '');
-        const currentYear = new Date().getFullYear();
+        const currentYear = new Date().getFullYear().toString();
 
         let finalDate = '';
 
-        // Case 0.5: "22" -> 02/02/YYYY (D/M -> DD/MM/YYYY)
+        // Legacy compact inputs -> normalize to YYYY/MM/DD
         if (digits.length === 2) {
             const d = digits.slice(0, 1).padStart(2, '0');
             const m = digits.slice(1).padStart(2, '0');
-            finalDate = `${d}/${m}/${currentYear}`;
-        }
-        // Case 1: "412" -> 04/12/YYYY (D/MM -> DD/MM/YYYY)
-        else if (digits.length === 3) {
+            finalDate = `${currentYear}/${m}/${d}`;
+        } else if (digits.length === 3) {
             const d = digits.slice(0, 1).padStart(2, '0');
             const m = digits.slice(1);
-            finalDate = `${d}/${m}/${currentYear}`;
-        }
-        // Case 1.5: "21226" -> 02/12/2026 (DMMYY -> DD/MM/YYYY)
-        else if (digits.length === 5) {
+            finalDate = `${currentYear}/${m}/${d}`;
+        } else if (digits.length === 5) {
             const d = digits.slice(0, 1).padStart(2, '0');
             const m = digits.slice(1, 3);
             const y = digits.slice(3);
-            finalDate = `${d}/${m}/20${y}`;
-        }
-        // Case 2: "0512" or "5/12" (digits=512 is ambiguous, assuming 4 if 0512) -> 05/12/YYYY
-        else if (digits.length === 4) {
-            const d = digits.slice(0, 2);
-            const m = digits.slice(2);
-            finalDate = `${d}/${m}/${currentYear}`;
-        }
-        // Case 3: "051226" -> 05/12/2026
-        else if (digits.length === 6) {
+            finalDate = `20${y}/${m}/${d}`;
+        } else if (digits.length === 4) {
+            const m = digits.slice(0, 2);
+            const d = digits.slice(2);
+            finalDate = `${currentYear}/${m}/${d}`;
+        } else if (digits.length === 6) {
             const d = digits.slice(0, 2);
             const m = digits.slice(2, 4);
             const y = digits.slice(4);
-            finalDate = `${d}/${m}/20${y}`;
-        }
-        // Case 4: "05122026" -> 05/12/2026
-        else if (digits.length === 8) {
-            const d = digits.slice(0, 2);
-            const m = digits.slice(2, 4);
-            const y = digits.slice(4);
-            finalDate = `${d}/${m}/${y}`;
+            finalDate = `20${y}/${m}/${d}`;
+        } else if (digits.length === 8) {
+            // Prefer YYYYMMDD; fallback DDMMYYYY
+            const y = digits.slice(0, 4);
+            const m = digits.slice(4, 6);
+            const d = digits.slice(6, 8);
+            if (Number(y) > 1900) finalDate = `${y}/${m}/${d}`;
+            else {
+                const dd = digits.slice(0, 2);
+                const mm = digits.slice(2, 4);
+                const yyyy = digits.slice(4);
+                finalDate = `${yyyy}/${mm}/${dd}`;
+            }
         }
 
         if (finalDate) {
@@ -1404,7 +1403,7 @@ export default function OrdenForm() {
                                                             handleSmartDate(e, `muestras.${index}.fecha_moldeo`);
                                                         }}
                                                         className={`w-24 mx-auto block px-2 py-1.5 text-xs font-bold text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.fecha_moldeo ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="DD/MM/YYYY"
+                                            placeholder="YYYY/MM/DD"
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3">
@@ -1451,7 +1450,7 @@ export default function OrdenForm() {
                                                             handleSmartDate(e, `muestras.${index}.fecha_rotura`);
                                                         }}
                                                         className={`w-24 mx-auto block px-2 py-1.5 text-xs font-bold text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white shadow-sm transition-all ${sampleErrors?.fecha_rotura ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-100'}`}
-                                                        placeholder="DD/MM/YYYY"
+                                            placeholder="YYYY/MM/DD"
                                                     />
                                                 </td>
                                                 <td className="px-1 py-3">
