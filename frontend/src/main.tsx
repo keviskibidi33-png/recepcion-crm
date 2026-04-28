@@ -15,6 +15,7 @@ const CRM_LOGIN_URL = import.meta.env.VITE_CRM_LOGIN_URL || 'http://localhost:30
 const AccessGate = ({ children }: { children: React.ReactNode }) => {
     const [searchParams] = useSearchParams();
     const [isAuthorized, setIsAuthorized] = React.useState<boolean | null>(null);
+    const [parentReadyAcknowledged, setParentReadyAcknowledged] = React.useState(false);
     const isEmbedded = window.parent !== window;
 
     const notifyParentReady = React.useCallback(() => {
@@ -43,6 +44,19 @@ const AccessGate = ({ children }: { children: React.ReactNode }) => {
     }, [searchParams]);
 
     React.useEffect(() => {
+        if (!isEmbedded || parentReadyAcknowledged) return;
+
+        notifyParentReady();
+        const readyInterval = window.setInterval(() => {
+            notifyParentReady();
+        }, 1000);
+
+        return () => {
+            clearInterval(readyInterval);
+        };
+    }, [isEmbedded, notifyParentReady, parentReadyAcknowledged]);
+
+    React.useEffect(() => {
         notifyParentReady();
 
         const delayedReady = window.setTimeout(() => {
@@ -52,6 +66,9 @@ const AccessGate = ({ children }: { children: React.ReactNode }) => {
         const onMessage = (event: MessageEvent) => {
             if (event.data?.type === 'PING_IFRAME_READY') {
                 notifyParentReady();
+            }
+            if (event.data?.type === 'IFRAME_READY_ACK') {
+                setParentReadyAcknowledged(true);
             }
             if (event.data?.type === 'TOKEN_REFRESH' && event.data.token) {
                 localStorage.setItem('token', event.data.token);

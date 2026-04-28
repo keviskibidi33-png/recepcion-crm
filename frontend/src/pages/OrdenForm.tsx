@@ -218,6 +218,11 @@ const normalizeImportedText = (value: unknown): string => {
     return CONTACT_PLACEHOLDERS.has(text.toUpperCase()) ? '' : text;
 };
 
+const normalizeImportedDate = (value: unknown): string => {
+    const normalized = normalizeDateInput(value);
+    return /^\d{4}\/\d{2}\/\d{2}$/.test(normalized) ? normalized : '';
+};
+
 const normalizeRucValue = (value: unknown): string => {
     const normalized = normalizeImportedText(value);
     if (!normalized) return '';
@@ -307,9 +312,9 @@ const sanitizeImportedMuestras = (muestras: any[] | undefined | null) => {
             fc_kg_cm2: (m.fc_kg_cm2 !== null && m.fc_kg_cm2 !== undefined && String(m.fc_kg_cm2).trim() !== '') ? m.fc_kg_cm2 : (DEFAULT_FC as any),
             edad: (m.edad !== null && m.edad !== undefined && String(m.edad).trim() !== '') ? m.edad : (DEFAULT_EDAD as any),
             requiere_densidad: m.requiere_densidad === true || m.requiere_densidad === 'true' || String(m.requiere_densidad || '').trim().toUpperCase() === 'SI',
-            fecha_moldeo: normalizeImportedText(m.fecha_moldeo),
+            fecha_moldeo: normalizeImportedDate(m.fecha_moldeo),
             hora_moldeo: normalizeImportedText(m.hora_moldeo),
-            fecha_rotura: normalizeImportedText(m.fecha_rotura),
+            fecha_rotura: normalizeImportedDate(m.fecha_rotura),
         }));
 
     return sanitized.length > 0 ? sanitized : [{
@@ -494,6 +499,8 @@ export default function OrdenForm() {
             if (d.solicitante) setValue('solicitante', normalizeImportedText(d.solicitante));
             if (d.domicilio_solicitante) setValue('domicilio_solicitante', normalizeImportedText(d.domicilio_solicitante));
             if (d.domicilio_legal) setValue('domicilio_legal', normalizeImportedText(d.domicilio_legal || d.ubicacion || ''));
+            if (d.fecha_recepcion) setValue('fecha_recepcion', normalizeImportedDate(d.fecha_recepcion));
+            if (d.fecha_estimada_culminacion) setValue('fecha_estimada_culminacion', normalizeImportedDate(d.fecha_estimada_culminacion));
 
             // Pre-fill muestras array
             if (Array.isArray(d.muestras) && d.muestras.length > 0) {
@@ -531,6 +538,8 @@ export default function OrdenForm() {
             if (data.solicitante) setValue('solicitante', normalizeImportedText(data.solicitante));
             if (data.domicilio_solicitante) setValue('domicilio_solicitante', normalizeImportedText(data.domicilio_solicitante));
             if (data.domicilio_legal) setValue('domicilio_legal', normalizeImportedText(data.domicilio_legal || data.ubicacion || ''));
+            if (data.fecha_recepcion) setValue('fecha_recepcion', normalizeImportedDate(data.fecha_recepcion));
+            if (data.fecha_estimada_culminacion) setValue('fecha_estimada_culminacion', normalizeImportedDate(data.fecha_estimada_culminacion));
             if (data.persona_contacto) {
                 const personaContacto = normalizeImportedText(data.persona_contacto);
                 setValue('persona_contacto', personaContacto);
@@ -567,6 +576,8 @@ export default function OrdenForm() {
                 if (d.solicitante) setValue('solicitante', normalizeImportedText(d.solicitante));
                 if (d.domicilio_solicitante) setValue('domicilio_solicitante', normalizeImportedText(d.domicilio_solicitante));
                 if (d.domicilio_legal) setValue('domicilio_legal', normalizeImportedText(d.domicilio_legal || d.ubicacion || ''));
+                if (d.fecha_recepcion) setValue('fecha_recepcion', normalizeImportedDate(d.fecha_recepcion));
+                if (d.fecha_estimada_culminacion) setValue('fecha_estimada_culminacion', normalizeImportedDate(d.fecha_estimada_culminacion));
                 if (d.persona_contacto) {
                     const personaContacto = normalizeImportedText(d.persona_contacto);
                     setValue('persona_contacto', personaContacto);
