@@ -42,6 +42,25 @@ const isDateWithinDays = (dateStr: string, days: number): boolean => {
     return diffDays >= 0 && diffDays <= days;
 };
 
+const normalizeDateInput = (value: unknown): string => {
+    if (value === null || value === undefined) return '';
+    let val = String(value).trim().replace(/[|]/g, '');
+    if (!val) return '';
+
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(val)) return val;
+
+    const digits = val.replace(/\D/g, '');
+    if (digits.length === 8) {
+        const y = digits.slice(0, 4);
+        const m = digits.slice(4, 6);
+        const d = digits.slice(6, 8);
+        if (Number(y) >= 1900 && Number(y) <= 2100) return `${y}/${m}/${d}`;
+        return `${digits.slice(4)}/${digits.slice(2, 4)}/${digits.slice(0, 2)}`;
+    }
+
+    return val;
+};
+
 const sampleSchema = z.object({
     item_numero: z.number().optional(),
     codigo_muestra_lem: z.string().optional(),
@@ -54,7 +73,10 @@ const sampleSchema = z.object({
             { message: "F'c Requerido (mayor a 0)" }
         ).transform((val) => Number(val))
     ),
-    fecha_moldeo: z.string().min(1, "Fecha de moldeo Requerida").regex(/^\d{4}\/\d{2}\/\d{2}$/, "Formato YYYY/MM/DD"),
+    fecha_moldeo: z.preprocess(
+        normalizeDateInput,
+        z.string().min(1, "Fecha de moldeo Requerida").regex(/^\d{4}\/\d{2}\/\d{2}$/, "Formato YYYY/MM/DD")
+    ),
     hora_moldeo: z.string().optional(),
     edad: z.preprocess(
         (val) => (val === null || val === undefined ? '' : val),
@@ -63,7 +85,10 @@ const sampleSchema = z.object({
             { message: "Edad Requerida (mínimo 1)" }
         ).transform((val) => Number(val))
     ),
-    fecha_rotura: z.string().min(1, "Fecha de rotura Requerida").regex(/^\d{4}\/\d{2}\/\d{2}$/, "Formato YYYY/MM/DD"),
+    fecha_rotura: z.preprocess(
+        normalizeDateInput,
+        z.string().min(1, "Fecha de rotura Requerida").regex(/^\d{4}\/\d{2}\/\d{2}$/, "Formato YYYY/MM/DD")
+    ),
     requiere_densidad: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.boolean(), z.string()]).optional().transform((val) => val === true || val === "true"))
 }).superRefine((data, ctx) => {
     // hora_moldeo required only if fecha_moldeo is within 3 days of today
@@ -93,11 +118,17 @@ const formSchema = z.object({
     domicilio_solicitante: z.string().min(1, "Requerido"),
     proyecto: z.string().min(1, "Requerido"),
     ubicacion: z.string().min(1, "Requerido"),
-    fecha_recepcion: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, "Fecha inválida (YYYY/MM/DD)"),
+    fecha_recepcion: z.preprocess(
+        normalizeDateInput,
+        z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, "Fecha inválida (YYYY/MM/DD)")
+    ),
     fecha_estimada_culminacion: z.preprocess(
         (val) => (val === null || val === undefined ? '' : val),
         z.string().refine(
-            (val) => val === '' || /^\d{4}\/\d{2}\/\d{2}$/.test(val),
+            (val) => {
+                const normalized = normalizeDateInput(val);
+                return normalized === '' || /^\d{4}\/\d{2}\/\d{2}$/.test(normalized);
+            },
             { message: "Fecha inválida (YYYY/MM/DD)" }
         )
     ),
