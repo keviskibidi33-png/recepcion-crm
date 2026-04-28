@@ -806,9 +806,9 @@ export default function OrdenForm() {
             muestrasValues.forEach((muestra, index) => {
                 const { fecha_moldeo, edad, fecha_rotura } = muestra;
 
-                if (fecha_moldeo && edad && /^\d{2}\/\d{2}\/\d{4}$/.test(fecha_moldeo)) {
+                if (fecha_moldeo && edad && /^\d{4}\/\d{2}\/\d{2}$/.test(fecha_moldeo)) {
                     try {
-                        const [day, month, year] = fecha_moldeo.split('/').map(Number);
+                        const [year, month, day] = fecha_moldeo.split('/').map(Number);
                         const date = new Date(year, month - 1, day);
 
                         // Add days (Edad)
@@ -937,7 +937,7 @@ export default function OrdenForm() {
 
         let finalDate = '';
 
-        // Legacy compact inputs -> normalize to YYYY/MM/DD
+        // Compact inputs -> normalize to YYYY/MM/DD (prefer year-first)
         if (digits.length === 2) {
             const d = digits.slice(0, 1).padStart(2, '0');
             const m = digits.slice(1).padStart(2, '0');
@@ -956,10 +956,18 @@ export default function OrdenForm() {
             const d = digits.slice(2);
             finalDate = `${currentYear}/${m}/${d}`;
         } else if (digits.length === 6) {
-            const d = digits.slice(0, 2);
-            const m = digits.slice(2, 4);
-            const y = digits.slice(4);
-            finalDate = `20${y}/${m}/${d}`;
+            // Prefer YYYYMM; fallback DDMMYY
+            const firstFour = Number(digits.slice(0, 4));
+            if (firstFour >= 1900 && firstFour <= 2100) {
+                const y = digits.slice(0, 4);
+                const m = digits.slice(4, 6);
+                finalDate = `${y}/${m}/01`;
+            } else {
+                const d = digits.slice(0, 2);
+                const m = digits.slice(2, 4);
+                const y = digits.slice(4);
+                finalDate = `20${y}/${m}/${d}`;
+            }
         } else if (digits.length === 8) {
             // Prefer YYYYMMDD; fallback DDMMYYYY
             const y = digits.slice(0, 4);
@@ -1658,7 +1666,7 @@ export default function OrdenForm() {
                                     handleSmartDate(e, 'fecha_recepcion');
                                 }}
                                 error={errors.fecha_recepcion?.message}
-                                placeholder="04/02/2026"
+                                placeholder="2026/02/04"
                             />
                             <InputField
                                 label="FECHA ESTIMADA DE CULMINACIÓN:"
@@ -1668,7 +1676,7 @@ export default function OrdenForm() {
                                     handleSmartDate(e, 'fecha_estimada_culminacion');
                                 }}
                                 error={errors.fecha_estimada_culminacion?.message}
-                                placeholder="08/12/2026"
+                                placeholder="2026/12/08"
                             />
                         </div>
 
