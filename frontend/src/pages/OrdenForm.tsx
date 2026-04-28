@@ -788,10 +788,16 @@ export default function OrdenForm() {
         // Exclude react-hook-form internal 'id' to prevent ghost/empty rows
         const { id: _rhfId, ...cloneData } = itemToClone as any;
 
+        const isYmd = (value: unknown) => typeof value === 'string' && /^\d{4}\/\d{2}\/\d{2}$/.test(value.trim());
+        const isHms = (value: unknown) => typeof value === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(value.trim());
+
         const newItem = {
             ...cloneData,
             item_numero: (currentMuestras.length || 0) + 1,
             codigo_muestra_lem: nextLem,
+            fecha_moldeo: isYmd(cloneData.fecha_moldeo) ? cloneData.fecha_moldeo.trim() : '',
+            fecha_rotura: isYmd(cloneData.fecha_rotura) ? cloneData.fecha_rotura.trim() : '',
+            hora_moldeo: isHms(cloneData.hora_moldeo) ? cloneData.hora_moldeo.trim() : '',
         };
 
         append(newItem);
