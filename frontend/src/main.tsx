@@ -15,7 +15,6 @@ const CRM_LOGIN_URL = import.meta.env.VITE_CRM_LOGIN_URL || 'http://localhost:30
 const AccessGate = ({ children }: { children: React.ReactNode }) => {
     const [searchParams] = useSearchParams();
     const [isAuthorized, setIsAuthorized] = React.useState<boolean | null>(null);
-    const [parentReadyAcknowledged, setParentReadyAcknowledged] = React.useState(false);
     const isEmbedded = window.parent !== window;
 
     const notifyParentReady = React.useCallback(() => {
@@ -28,6 +27,7 @@ const AccessGate = ({ children }: { children: React.ReactNode }) => {
         }, '*');
     }, [isEmbedded]);
 
+    // ── Auth: extract token from URL or localStorage ──
     React.useEffect(() => {
         const tokenFromUrl = searchParams.get('token');
         if (tokenFromUrl) {
@@ -41,35 +41,20 @@ const AccessGate = ({ children }: { children: React.ReactNode }) => {
         if (isEmbedded && !token) {
             window.parent.postMessage({ type: 'TOKEN_REFRESH_REQUEST', source: 'recepcion' }, '*');
         }
-    }, [searchParams]);
+    }, [searchParams, isEmbedded]);
 
+    // ── Notify parent: fire-and-forget (no polling) + respond to PINGs ──
     React.useEffect(() => {
-        if (!isEmbedded || parentReadyAcknowledged) return;
-
+        // Send IFRAME_READY immediately and once more after a short delay
         notifyParentReady();
-        const readyInterval = window.setInterval(() => {
-            notifyParentReady();
-        }, 1000);
-
-        return () => {
-            clearInterval(readyInterval);
-        };
-    }, [isEmbedded, notifyParentReady, parentReadyAcknowledged]);
-
-    React.useEffect(() => {
-        notifyParentReady();
-
-        const delayedReady = window.setTimeout(() => {
-            notifyParentReady();
-        }, 350);
+        const delayedReady = window.setTimeout(notifyParentReady, 300);
 
         const onMessage = (event: MessageEvent) => {
+            // Respond to parent pings (sent from SmartIframe on onLoad)
             if (event.data?.type === 'PING_IFRAME_READY') {
                 notifyParentReady();
             }
-            if (event.data?.type === 'IFRAME_READY_ACK') {
-                setParentReadyAcknowledged(true);
-            }
+            // Handle token refresh responses from CRM parent
             if (event.data?.type === 'TOKEN_REFRESH' && event.data.token) {
                 localStorage.setItem('token', event.data.token);
                 setIsAuthorized(true);
