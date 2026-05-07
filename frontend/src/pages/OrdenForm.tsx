@@ -907,11 +907,14 @@ export default function OrdenForm() {
 
             if (isEditMode) {
                 await recepcionApi.actualizar(Number(id), formattedData as any);
-                queryClient.invalidateQueries('recepciones-migration');
+                await Promise.all([
+                    queryClient.invalidateQueries('recepciones-migration'),
+                    queryClient.invalidateQueries(['recepcion-migration', id]),
+                ]);
                 handleClose('updated');
             } else {
                 await recepcionApi.crear(formattedData as any);
-                queryClient.invalidateQueries('recepciones-migration');
+                await queryClient.invalidateQueries('recepciones-migration');
                 handleClose('created');
             }
         } catch (error: any) {
