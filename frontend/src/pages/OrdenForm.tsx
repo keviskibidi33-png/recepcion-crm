@@ -822,8 +822,9 @@ export default function OrdenForm() {
             }
         }
 
-        let nextLem = incrementString(lastLem);
-        while (nextLem && existingCodes.has(nextLem.trim().toUpperCase())) {
+        const isPlaceholderCode = lastLem.trim() === '-';
+        let nextLem = isPlaceholderCode ? '-' : incrementString(lastLem);
+        while (!isPlaceholderCode && nextLem && existingCodes.has(nextLem.trim().toUpperCase())) {
             nextLem = incrementString(nextLem);
         }
 
@@ -951,7 +952,7 @@ export default function OrdenForm() {
 
     // Smart date formatting
     const handleSmartDate = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>, name: any) => {
-        let val = e.target.value.trim();
+        const val = e.target.value.trim();
         if (!val) return;
 
         // Preferred format: YYYY/MM/DD. Accept legacy inputs and normalize.
@@ -1474,7 +1475,7 @@ export default function OrdenForm() {
                                                                 type="text"
                                                                 value={field.value || ''}
                                                                 onChange={(e) => {
-                                                                    let v = e.target.value.replace(/[^\d:]/g, '');
+                                                                    const v = e.target.value.replace(/[^\d:]/g, '');
                                                                     const digits = v.replace(/:/g, '');
                                                                     if (digits.length <= 6) {
                                                                         let formatted = '';
