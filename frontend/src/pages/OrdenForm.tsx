@@ -485,6 +485,9 @@ export default function OrdenForm() {
             console.debug('[OrdenForm] Pre-filling from imported Excel:', d);
 
             // Pre-fill header fields
+            if (d.numero_recepcion !== undefined) setValue('numero_recepcion', normalizeImportedText(d.numero_recepcion).toUpperCase());
+            if (d.numero_cotizacion !== undefined) setValue('numero_cotizacion', normalizeImportedText(d.numero_cotizacion).toUpperCase());
+            if (d.numero_ot !== undefined) setValue('numero_ot', normalizeImportedText(d.numero_ot).toUpperCase());
             if (d.cliente) setValue('cliente', normalizeImportedText(d.cliente));
             if (d.ruc) setValue('ruc', normalizeRucValue(d.ruc));
             if (d.persona_contacto) {
@@ -531,6 +534,9 @@ export default function OrdenForm() {
             toast.success(`Excel importado: ${data.muestras?.length || 0} muestras detectadas`);
             
             // Pre-fill header
+            if (data.numero_recepcion !== undefined) setValue('numero_recepcion', normalizeImportedText(data.numero_recepcion).toUpperCase());
+            if (data.numero_cotizacion !== undefined) setValue('numero_cotizacion', normalizeImportedText(data.numero_cotizacion).toUpperCase());
+            if (data.numero_ot !== undefined) setValue('numero_ot', normalizeImportedText(data.numero_ot).toUpperCase());
             if (data.cliente) setValue('cliente', normalizeImportedText(data.cliente));
             if (data.ruc) setValue('ruc', normalizeRucValue(data.ruc));
             if (data.proyecto) setValue('proyecto', normalizeImportedText(data.proyecto));
