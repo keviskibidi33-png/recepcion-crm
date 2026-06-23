@@ -307,8 +307,8 @@ const sanitizeImportedMuestras = (muestras: any[] | undefined | null) => {
         .map((m, idx) => ({
             item_numero: idx + 1,
             codigo_muestra_lem: normalizeLemCode(normalizeImportedText(m.codigo_muestra_lem)),
-            identificacion_muestra: normalizeImportedText(m.identificacion_muestra || m.descripcion),
-            estructura: normalizeImportedText(m.estructura),
+            identificacion_muestra: String(m.identificacion_muestra || m.descripcion || '').trim(),
+            estructura: String(m.estructura || '').trim(),
             fc_kg_cm2: (m.fc_kg_cm2 !== null && m.fc_kg_cm2 !== undefined && String(m.fc_kg_cm2).trim() !== '') ? m.fc_kg_cm2 : (DEFAULT_FC as any),
             edad: (m.edad !== null && m.edad !== undefined && String(m.edad).trim() !== '') ? m.edad : (DEFAULT_EDAD as any),
             requiere_densidad: m.requiere_densidad === true || m.requiere_densidad === 'true' || String(m.requiere_densidad || '').trim().toUpperCase() === 'SI',
