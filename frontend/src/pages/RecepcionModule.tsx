@@ -27,6 +27,7 @@ export default function RecepcionModule() {
     const [filters, setFilters] = useState({
         search: '',
         status: 'all',
+        tipo: 'all',
     })
     const [deleteId, setDeleteId] = useState<number | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
@@ -52,50 +53,64 @@ export default function RecepcionModule() {
         if (!file) return
 
         if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xlsm')) {
-            toast.error('Solo se permiten archivos Excel (.xlsx, .xlsm)')
+            toast.error("Formato no válido. Selecciona .xlsx o .xlsm")
             return
         }
 
         setIsImporting(true)
-        const loadingToast = toast.loading('Procesando Excel...')
+        const loadingToast = toast.loading("Procesando Excel...")
 
         try {
-            const importedData = await recepcionApi.importarExcel(file)
+            const formData = new FormData()
+            formData.append('file', file)
+            
+            const response = await fetch(`${process.env.VITE_API_URL || 'https://api.geofal.com.pe'}/api/recepcion/importar-excel`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.detail || "Error al procesar el Excel")
+            }
+
+            const data = await response.json()
             toast.dismiss(loadingToast)
-            toast.success(`Excel importado: ${importedData.muestras?.length || 0} muestras detectadas`)
-            // Navigate to form with pre-filled data
-            navigate('/migration/nueva-recepcion', { state: { importedData } })
+            toast.success(`Excel importado: ${data.muestras?.length || 0} muestras detectadas`)
+            
+            // Navigate to new form with imported data in state
+            navigate('/migration/nueva-recepcion', { state: { importedData: data } })
         } catch (error: any) {
             toast.dismiss(loadingToast)
-            const msg = error.response?.data?.detail || error.message || 'Error procesando Excel'
-            toast.error(msg)
+            toast.error(error.message)
         } finally {
             setIsImporting(false)
-            // Reset file input so the same file can be re-selected
-            if (fileInputRef.current) fileInputRef.current.value = ''
+            if (fileInputRef.current) fileInputRef.current.value = ""
         }
     }
 
-    // The following code block seems to be intended for a form submission component,
-    // not directly for this RecepcionModule which primarily lists and deletes.
-    const deleteMutation = useMutation(recepcionApi.eliminar, {
-        onSuccess: () => {
+    const handleDelete = async () => {
+        if (!deleteId) return
+        setIsDeleting(true)
+        try {
+            await recepcionApi.eliminar(deleteId)
+            toast.success('Recepción eliminada correctamente')
             queryClient.invalidateQueries('recepciones-migration')
-            toast.success('Recepción eliminada exitosamente')
             setDeleteId(null)
-        },
-        onError: (error: any) => {
+        } catch (error: any) {
             toast.error(`Error al eliminar: ${error.message}`)
-        },
-        onSettled: () => {
+        } finally {
             setIsDeleting(false)
         }
-    })
+    }
 
     const filteredData = useMemo(() => {
         if (!ordenes) return []
 
-        let currentData = ordenes
+        let currentData = [...ordenes]
 
         if (filters.search.trim()) {
             const searchLower = filters.search.toLowerCase()
@@ -109,6 +124,12 @@ export default function RecepcionModule() {
         if (filters.status !== 'all') {
             currentData = currentData.filter(orden =>
                 orden.estado?.toLowerCase() === filters.status
+            )
+        }
+
+        if (filters.tipo !== 'all') {
+            currentData = currentData.filter(orden =>
+                (orden.tipo_recepcion || 'CONCRETO').toUpperCase() === filters.tipo.toUpperCase()
             )
         }
 
@@ -129,11 +150,11 @@ export default function RecepcionModule() {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Recepciones</h1>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Recepciones Generales</h1>
                     <p className="text-slate-500 font-medium mt-1">Gestiona los registros de ingreso de muestras</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="p-3 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
+                    <button onClick={() => refetch()} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
                         <RefreshCw className="h-5 w-5" />
                     </button>
                     <button
@@ -169,6 +190,19 @@ export default function RecepcionModule() {
 
                 <div className="flex items-center gap-4">
                     <div className="h-8 w-[1px] bg-slate-200 mx-2 hidden lg:block" />
+
+                    <select
+                        value={filters.tipo}
+                        onChange={(e) => setFilters({ ...filters, tipo: e.target.value })}
+                        className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 outline-none cursor-pointer focus:border-blue-500"
+                    >
+                        <option value="all">Todos los tipos</option>
+                        <option value="CONCRETO">Concreto (Probetas)</option>
+                        <option value="ROCA">Muestras de Roca</option>
+                        <option value="ALBANILERIA">Muestras de Albañilería</option>
+                        <option value="AGUA">Muestras de Agua</option>
+                        <option value="SUELO_AGREGADO">Suelo y Agregado</option>
+                    </select>
 
                     <select
                         value={filters.status}
@@ -286,7 +320,7 @@ export default function RecepcionModule() {
                                 Cancelar
                             </button>
                             <button
-                                onClick={() => deleteMutation.mutate(deleteId)}
+                                onClick={handleDelete}
                                 disabled={isDeleting}
                                 className="flex-1 px-8 py-4 bg-red-600 text-white rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-500/20 disabled:opacity-50"
                             >
