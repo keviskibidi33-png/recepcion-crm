@@ -61,11 +61,23 @@ const normalizeDateInput = (value: unknown): string => {
     return val;
 };
 
+const safeOptionalString = (defaultVal = "") =>
+    z.preprocess(
+        (val) => (val === null || val === undefined ? defaultVal : String(val)),
+        z.string().optional().default(defaultVal)
+    );
+
+const safeRequiredString = (msg: string) =>
+    z.preprocess(
+        (val) => (val === null || val === undefined ? "" : String(val)),
+        z.string().min(1, msg)
+    );
+
 const sampleSchema = z.object({
     item_numero: z.number().optional(),
-    codigo_muestra_lem: z.string().optional(),
-    identificacion_muestra: z.string().min(1, "Identificación Requerida"),
-    estructura: z.string().min(1, "Estructura Requerida"),
+    codigo_muestra_lem: safeOptionalString(""),
+    identificacion_muestra: safeRequiredString("Identificación Requerida"),
+    estructura: safeRequiredString("Estructura Requerida"),
     fc_kg_cm2: z.preprocess(
         (val) => (val === null || val === undefined ? '' : val),
         z.union([z.number(), z.string()]).refine(
@@ -77,7 +89,7 @@ const sampleSchema = z.object({
         normalizeDateInput,
         z.string().min(1, "Fecha de moldeo Requerida").regex(/^\d{4}\/\d{2}\/\d{2}$/, "Formato YYYY/MM/DD")
     ),
-    hora_moldeo: z.string().optional(),
+    hora_moldeo: safeOptionalString(""),
     edad: z.preprocess(
         (val) => (val === null || val === undefined ? '' : val),
         z.union([z.number(), z.string()]).refine(
@@ -89,7 +101,13 @@ const sampleSchema = z.object({
         normalizeDateInput,
         z.string().min(1, "Fecha de rotura Requerida").regex(/^\d{4}\/\d{2}\/\d{2}$/, "Formato YYYY/MM/DD")
     ),
-    requiere_densidad: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.boolean(), z.string()]).optional().transform((val) => val === true || val === "true"))
+    requiere_densidad: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.boolean(), z.string()]).optional().transform((val) => val === true || val === "true")),
+    tamano_peso: safeOptionalString(""),
+    procedencia: safeOptionalString(""),
+    descripcion_muestra: safeOptionalString(""),
+    cantidad: safeOptionalString(""),
+    ensayos_requeridos: safeOptionalString(""),
+    norma_requerida: safeOptionalString(""),
 }).superRefine((data, ctx) => {
     // hora_moldeo required only if fecha_moldeo is within 3 days of today
     if (data.fecha_moldeo && isDateWithinDays(data.fecha_moldeo, 3)) {
@@ -104,20 +122,23 @@ const sampleSchema = z.object({
 });
 
 const formSchema = z.object({
-    numero_ot: z.string().min(1, "OT Requerida"),
-    numero_recepcion: z.string().min(1, "Recepción Requerida"),
-    numero_cotizacion: z.preprocess((val) => (val === null ? undefined : val), z.string().optional()),
-    cliente: z.string().min(1, "Cliente Requerido"),
-    domicilio_legal: z.string().min(1, "Requerido"),
-    ruc: z.string().trim().regex(/^\d{8,20}$/, "RUC inválido"),
+    numero_ot: safeRequiredString("OT Requerida"),
+    numero_recepcion: safeRequiredString("Recepción Requerida"),
+    numero_cotizacion: safeOptionalString(""),
+    cliente: safeRequiredString("Cliente Requerido"),
+    domicilio_legal: safeRequiredString("Requerido"),
+    ruc: z.preprocess(
+        (val) => (val === null || val === undefined ? "" : String(val).trim()),
+        z.string().trim().regex(/^\d{8,20}$/, "RUC inválido")
+    ),
     // Contact fields: individually optional, but 2 of 3 required (validated below)
-    persona_contacto: z.string().optional().default(""),
-    email: z.string().optional().default(""),
-    telefono: z.string().optional().default(""),
-    solicitante: z.string().min(1, "Requerido"),
-    domicilio_solicitante: z.string().min(1, "Requerido"),
-    proyecto: z.string().min(1, "Requerido"),
-    ubicacion: z.string().min(1, "Requerido"),
+    persona_contacto: safeOptionalString(""),
+    email: safeOptionalString(""),
+    telefono: safeOptionalString(""),
+    solicitante: safeRequiredString("Requerido"),
+    domicilio_solicitante: safeRequiredString("Requerido"),
+    proyecto: safeRequiredString("Requerido"),
+    ubicacion: safeRequiredString("Requerido"),
     fecha_recepcion: z.preprocess(
         normalizeDateInput,
         z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, "Fecha inválida (YYYY/MM/DD)")
@@ -134,9 +155,9 @@ const formSchema = z.object({
     ),
     emision_fisica: z.preprocess((val) => val === true || val === "true" || val === "on", z.boolean()),
     emision_digital: z.preprocess((val) => val === true || val === "true" || val === "on", z.boolean()),
-    entregado_por: z.string().min(1, "Requerido"),
-    recibido_por: z.string().min(1, "Requerido"),
-    observaciones: z.string().optional(),
+    entregado_por: safeRequiredString("Requerido"),
+    recibido_por: safeRequiredString("Requerido"),
+    observaciones: safeOptionalString(""),
     muestras: z.preprocess(
         (val) => {
             if (!Array.isArray(val)) return val;
